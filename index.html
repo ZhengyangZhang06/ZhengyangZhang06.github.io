@@ -1,15 +1,298 @@
-<h1>Zhengyang Zhang's Homepage</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zhengyang Zhang</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b1b1f;
+    --muted: #5f6368;
+    --rule: #e3e3e8;
+    --link: #1a4fa0;
+    --accent: #7b1f2b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14151a;
+      --fg: #e6e6ea;
+      --muted: #a0a3ad;
+      --rule: #2c2e36;
+      --link: #8fb4ee;
+      --accent: #e0a0aa;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+    max-width: 46rem;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Charter, Georgia, "Songti SC", serif;
+    font-size: 17px;
+    line-height: 1.65;
+  }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  header { margin-bottom: 2.5rem; }
+  h1 { font-size: 2.1rem; margin: 0 0 .35rem; letter-spacing: -.01em; }
+  .tagline { color: var(--muted); margin: 0 0 .75rem; }
+  .contact { color: var(--muted); font-size: .92rem; margin: 0; }
+  .contact span { white-space: nowrap; }
+  .contact .sep { padding: 0 .45rem; opacity: .5; }
+  h2 {
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: .35rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .entry { margin-bottom: 1.6rem; }
+  .entry-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .entry-title { font-weight: 600; }
+  .entry-date { color: var(--muted); font-size: .88rem; white-space: nowrap; }
+  .entry-meta { color: var(--muted); font-size: .92rem; margin: .1rem 0 .4rem; }
+  .venue { color: var(--accent); font-style: italic; }
+  ul { margin: .4rem 0; padding-left: 1.15rem; }
+  li { margin-bottom: .3rem; }
+  .plain { list-style: none; padding-left: 0; }
+  .plain li { margin-bottom: .35rem; }
+  .skill-label { font-weight: 600; }
+  .pub { margin-bottom: 1.4rem; }
+  .pub-title { font-weight: 600; }
+  .pub-authors { font-size: .92rem; margin: .15rem 0 .25rem; }
+  .pub-authors .me { font-weight: 600; text-decoration: underline; }
+  .pub-links { font-size: .88rem; color: var(--muted); }
+  .posts { margin-top: .7rem; }
+  .posts-label {
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .posts ul { list-style: none; padding-left: 0; margin: .35rem 0 0; }
+  .posts li { font-size: .92rem; margin-bottom: .3rem; }
+  .posts .post-date { color: var(--muted); font-size: .85rem; }
+  .teaser { margin: .9rem 0 0; }
+  .teaser img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: #fff;
+  }
+  .teaser figcaption {
+    font-size: .82rem;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: .45rem;
+  }
+  footer {
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: .85rem;
+  }
+</style>
+</head>
+<body>
 
-<h2>About Me</h2>
+<header>
+  <h1>Zhengyang Zhang</h1>
+  <p class="tagline">Undergraduate student and researcher, IIIS (Yao Class), Tsinghua University</p>
+  <p class="contact">
+    <span>Beijing, China</span><span class="sep">&middot;</span>
+    <span><a href="mailto:zzy24@mails.tsinghua.edu.cn">zzy24@mails.tsinghua.edu.cn</a></span><span class="sep">&middot;</span>
+    <span><a href="mailto:z1105480@gmail.com">z1105480@gmail.com</a></span><span class="sep">&middot;</span>
+    <span><a href="https://github.com/ZhengyangZhang06">github.com/ZhengyangZhang06</a></span>
+  </p>
+</header>
+
+<h2>Research Interests</h2>
+<p>
+  My research interests lie in Large Language Models (LLMs) and their applications in reasoning.
+  I am passionate about enhancing LLM performance and efficiency through algorithmic methods such
+  as Reinforcement Learning. Currently I am a second-year undergraduate researcher at IIIS
+  (Yao Class), Tsinghua University.
+</p>
+
+<h2>Publications</h2>
+
+<div class="pub">
+  <div class="pub-title">
+    <a href="https://arxiv.org/abs/2608.24658">Parason: Revealing Subtask and Trial Parallelism in LLM Reasoning</a>
+  </div>
+  <p class="pub-authors">
+    <span class="me">Zhengyang Zhang</span>, Zijian Zhang, Jiaxuan Gao, Shusheng Xu, Yi Wu, Song Han, Ligeng Zhu
+  </p>
+  <p class="pub-links">
+    <span class="venue">arXiv preprint</span>, August 2026 &middot;
+    <a href="https://arxiv.org/abs/2608.24658">arXiv:2608.24658</a>
+  </p>
+  <figure class="teaser">
+    <a href="https://arxiv.org/abs/2608.24658">
+      <img src="assets/parason-teaser.png"
+           alt="Overview of Subtask Parallelism versus Trial Parallelism in LLM reasoning.">
+    </a>
+    <figcaption>
+      Overview of the two types of parallelism. Subtask Parallelism decomposes a step into
+      branches that are all needed for the final answer, while Trial Parallelism explores
+      multiple uncertain paths as alternative (OR) branches. Our analysis shows Trial
+      Parallelism accounts for the majority of parallelizable reasoning.
+    </figcaption>
+  </figure>
+</div>
+
+<h2>Research Experience</h2>
+
+<div class="entry">
+  <div class="entry-head">
+    <span class="entry-title">Parallel Reasoning LLMs &mdash;
+      <a href="https://arxiv.org/abs/2608.24658">Parason</a></span>
+    <span class="entry-date">Jul 2025 &ndash; Jun 2026</span>
+  </div>
+  <p class="entry-meta">
+    Leading Author, <span class="venue">arXiv:2608.24658</span><br>
+    Advisor: Ligeng Zhu, Senior Research Scientist at NVIDIA
+  </p>
+  <ul>
+    <li>Curated a parallel SFT dataset from S-1 reasoning datasets, achieving better performance
+      than sequential SFT with lower latency and building the state-of-the-art parallel reasoning model.</li>
+    <li>Divided parallel reasoning into two types &mdash; subtask parallelism and trial parallelism &mdash;
+      representing collective and competitive parallelism respectively.</li>
+    <li>Designed novel reward functions for RL that boost trial parallelism, reaching similar accuracy
+      with only 1/4 of the original thinking token budget.</li>
+    <li>Conducted extensive ablation studies on how different parallelism types affect the latency
+      and accuracy of the reasoning process.</li>
+  </ul>
+</div>
+
+<div class="entry">
+  <div class="entry-head">
+    <span class="entry-title">Test-Time Scaling</span>
+    <span class="entry-date">Sep 2025 &ndash; Feb 2026</span>
+  </div>
+  <p class="entry-meta">
+    Contributor, <span class="venue">submitted to ICML 2026</span><br>
+    Advisor: Yi Wu, Assistant Professor at Tsinghua University
+  </p>
+  <ul>
+    <li>Implemented and aggregated various test-time scaling strategies (internal: controlling thinking
+      level; turn-wise: reflecting on previous answers; aggregation across multiple runs), finding the
+      best configuration for math reasoning and coding.</li>
+    <li>Applied test-time scaling to open-source LLMs and surpassed the performance of closed-source models.</li>
+  </ul>
+</div>
+
+<div class="entry">
+  <div class="entry-head">
+    <span class="entry-title">Agent Flow for Advanced Science</span>
+    <span class="entry-date">Jul 2026 &ndash; Present</span>
+  </div>
+  <p class="entry-meta">
+    Leading Author<br>
+    Advisor: Ligeng Zhu, Senior Research Scientist at NVIDIA
+  </p>
+  <ul>
+    <li>Designed a worker&ndash;reviewer architecture: workers translate model outputs into formal
+      artifacts (Lean statements, Mathlib API calls, bridging lemmas), reviewers inspect them and
+      return targeted feedback, and the loop repeats until approval, producing formally verifiable solutions.</li>
+    <li>Built and evaluated agent-flow pipelines for advanced scientific reasoning and formalization,
+      with emphasis on robustness, correctness, and production readiness.</li>
+    <li>Achieved top benchmark results: 1st on Lean Eval and Putnam; aced IMO, IOI, and IPhO.</li>
+  </ul>
+  <div class="posts">
+    <span class="posts-label">Announcements</span>
+    <ul>
+      <li>
+        <a href="https://x.com/LigengZhu/status/2095848020277674348">100% on the PutnamBench leaderboard with Humanize&nbsp;2</a>
+        <span class="post-date">&middot; Sep 4, 2026</span>
+      </li>
+      <li>
+        <a href="https://x.com/LigengZhu/status/2089025611587334546">#1 on the Lean-Eval leaderboard &mdash; 166 problems solved, under 50k total tokens</a>
+        <span class="post-date">&middot; Aug 16, 2026</span>
+      </li>
+      <li>
+        <a href="https://x.com/LigengZhu/status/2081387264769507440">A perfect 6/6 (42/42) on IMO 2026 in Lean&nbsp;4, powered by Humanize &times; Kimi-K3</a>
+        <span class="post-date">&middot; Jul 26, 2026</span>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<h2>Industrial Experience</h2>
+
+<div class="entry">
+  <div class="entry-head">
+    <span class="entry-title">RL Lab, Ant Group</span>
+    <span class="entry-date">Aug 2025 &ndash; Jun 2026</span>
+  </div>
+  <p class="entry-meta">Research Intern &middot; Beijing, China</p>
+  <ul>
+    <li>Conducted research on reinforcement learning and large language model optimization,
+      including test-time scaling and parallel reasoning models.</li>
+  </ul>
+</div>
+
+<h2>Awards</h2>
 <ul>
-	<li><strong>Name:</strong> Zhengyang Zhang</li>
-	<li><strong>School:</strong> Tsinghua University</li>
-	<li><strong>Major:</strong> Computer Science  </li>
-	<li><strong>Email:</strong> zzy24@mails.tsinghua.edu.cn/ z1105480@gmail.com</li>
-	<li><strong>Location:</strong> Beijing, China</li>
+  <li>Tsinghua University Outstanding Scholarship for Technological Innovation, 2025</li>
+  <li>Tsinghua University Scholarship for Academic Excellence, 2025</li>
+  <li>Tsinghua University Xuetang Scholarship, 2025</li>
+  <li>Tsinghua University Second-Class Freshman Scholarship, 2024</li>
+  <li>China Physics Olympiad (CPhO) Gold Medal, National Training Team (top 50 nationwide), 2023</li>
+  <li>China Physics Olympiad (CPhO) Gold Medal, 2022</li>
 </ul>
 
-<h2>Biography</h2>
-<p>
-	I am a second-year undergraduate student at Tsinghua University, majoring in Computer Science. My research interests include Large Language Models, Reinforcement Learning.
-</p>
+<h2>Skills</h2>
+<ul class="plain">
+  <li><span class="skill-label">Programming:</span> Python, C++, Scala</li>
+  <li><span class="skill-label">AI Frameworks &amp; Libraries:</span> PyTorch, Hugging Face, DeepSpeed, vLLM, SGLang, LlamaFactory, verl, AReaL</li>
+  <li><span class="skill-label">Languages:</span> Chinese (Native), English (Fluent, GRE 332/340)</li>
+</ul>
+
+<h2>Education</h2>
+
+<div class="entry">
+  <div class="entry-head">
+    <span class="entry-title">IIIS (Yao Class), Tsinghua University</span>
+    <span class="entry-date">Sep 2024 &ndash; Present</span>
+  </div>
+  <p class="entry-meta">Undergraduate Student and Researcher &middot; Beijing, China</p>
+  <ul>
+    <li>Enrolled in the Yao Class (Computer Science Pilot Class), maintaining a strong academic
+      record (GPA 3.9/4.0, rank 9/92) and participating in advanced research seminars.</li>
+  </ul>
+</div>
+
+<div class="entry">
+  <div class="entry-head">
+    <span class="entry-title">Shanghai High School</span>
+    <span class="entry-date">Sep 2021 &ndash; Jun 2024</span>
+  </div>
+  <p class="entry-meta">Shanghai, China</p>
+  <ul>
+    <li>Multiple Gold Medals in the Chinese Physics Olympiad (CPhO); qualified for the IPhO
+      National Training Team (top 50 nationwide).</li>
+    <li>Selected as an Outstanding Graduate of Shanghai High School in 2024.</li>
+  </ul>
+</div>
+
+<footer>
+  Last updated September 2026.
+</footer>
+
+</body>
+</html>
