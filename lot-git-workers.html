@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>*{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}</style>
+<title>LOT Git Workers</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one reading column, three sections; diagrams use two lanes colored by side (tree vs worker) */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1b1f27; --ink2:#4a5160; --muted:#7b8292; --line:#dde1e8;
+  --tree:#3d55c4; --tree-soft:#e8ecfb; --worker:#0d7f6f; --worker-soft:#e2f4f0; --git:#5b616e; --git-soft:#eef0f3;
+  --wait:#b9bec8; --ok:#1f7a3a; --warn:#a2610c;
+  --sans:"IBM Plex Sans","PingFang SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d;
+  --tree:#8399f2; --tree-soft:#222a45; --worker:#43c2ad; --worker-soft:#16332e; --git:#a3a9b5; --git-soft:#252a32;
+  --wait:#59606c; --ok:#5cc47a; --warn:#e0a24a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d;
+  --tree:#8399f2; --tree-soft:#222a45; --worker:#43c2ad; --worker-soft:#16332e; --git:#a3a9b5; --git-soft:#252a32;
+  --wait:#59606c; --ok:#5cc47a; --warn:#e0a24a; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.65 var(--sans)}
+.wrap{max-width:980px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:56px}
+h1{font-size:30px;line-height:1.25;margin:0;font-weight:600;text-wrap:balance}
+h2{font-size:21px;margin:0;font-weight:600;text-wrap:balance}
+h3{font-size:15px;margin:0;font-weight:600}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--mono);font-size:.86em}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+header{display:flex;flex-direction:column;gap:12px}
+header .lede{color:var(--ink2);font-size:16px}
+section{display:flex;flex-direction:column;gap:20px}
+.t{color:var(--tree);font-weight:600}.w{color:var(--worker);font-weight:600}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+
+/* compare diagrams */
+.cmp{display:grid;grid-template-columns:1fr 1.5fr;gap:16px}
+.cmp>.panel{padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.box{border:1.5px solid;border-radius:6px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.box.tree{border-color:var(--tree);background:var(--tree-soft)}
+.box.worker{border-color:var(--worker);background:var(--worker-soft)}
+.box.git{border-color:var(--git);background:var(--git-soft)}
+.box b{font-size:13.5px}
+.host{border:1.5px dashed var(--muted);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative}
+.host>.lbl{font:500 11.5px var(--mono);color:var(--muted)}
+.sessions{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:500 11.5px var(--mono);padding:2px 7px;border-radius:4px;border:1px solid var(--tree);color:var(--tree);background:var(--panel)}
+.chip.wk{border-color:var(--worker);color:var(--worker)}
+.remote{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:stretch;gap:6px}
+.remote .arrow{display:flex;flex-direction:column;justify-content:center;align-items:center;font:500 11px var(--mono);color:var(--muted);gap:2px;text-align:center}
+.remote .arrow span{font-size:16px;color:var(--ink2)}
+.refs{font:11.5px var(--mono);display:flex;flex-direction:column;gap:3px;word-break:break-all}
+.note{font-size:13px;color:var(--ink2)}
+.wall{font:500 11.5px var(--mono);color:var(--warn);text-align:center}
+
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+.tbl{overflow-x:auto}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+thead th{font-weight:600;font-size:13px;border-bottom:1.5px solid var(--ink2)}
+tbody th{font-weight:500;color:var(--ink2);white-space:nowrap}
+td.hl{background:var(--worker-soft)}
+
+/* stepper */
+.stepper{padding:0;overflow:hidden}
+.steps{display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto}
+.steps button{flex:1 0 auto;font:500 12.5px var(--sans);background:none;border:0;border-bottom:2px solid transparent;padding:12px 14px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.steps button .n{font-family:var(--mono);margin-right:6px}
+.steps button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.steps button:focus-visible,.nav button:focus-visible{outline:2px solid var(--tree);outline-offset:-2px}
+.stage{padding:20px;display:flex;flex-direction:column;gap:16px}
+.stage .desc{display:flex;flex-direction:column;gap:6px}
+.stage .desc h3{font-size:17px}
+.lanes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.lane{border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0;border:1.5px solid}
+.lane.tree{border-color:var(--tree);background:var(--tree-soft)}
+.lane.git{border-color:var(--git);background:var(--git-soft)}
+.lane.worker{border-color:var(--worker);background:var(--worker-soft)}
+.lane h4{margin:0;font:600 12px var(--mono);letter-spacing:.04em;text-transform:uppercase}
+.lane.tree h4{color:var(--tree)}.lane.git h4{color:var(--git)}.lane.worker h4{color:var(--worker)}
+.lane ul{margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.lane .ref{font:11.5px var(--mono);word-break:break-all;padding:3px 6px;border-radius:4px;background:var(--panel);border:1px solid var(--line)}
+.lane .ref.new{border-color:var(--ink2);font-weight:500}
+.lane .ref.gone{text-decoration:line-through;color:var(--muted)}
+.lane .idle{font-size:13px;color:var(--muted)}
+.real{font-size:13px;color:var(--ink2);border-left:3px solid var(--line);padding-left:10px}
+.nav{display:flex;justify-content:space-between;gap:8px}
+.nav button{font:500 13px var(--sans);padding:7px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.nav button:disabled{opacity:.4;cursor:default}
+
+.ends{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.ends .panel{padding:14px 16px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.ends .tag{font:500 12px var(--mono)}
+.rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:72ch}
+
+/* gantt */
+.chart{padding:16px;display:flex;flex-direction:column;gap:12px}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink2)}
+.legend i{display:inline-block;width:18px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.scroll{overflow-x:auto;position:relative}
+svg text{font-family:var(--mono)}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.12);max-width:300px;z-index:3}
+.tip b{font-family:var(--mono)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.facts div{font-size:13.5px;color:var(--ink2)}
+.facts strong{display:block;color:var(--ink);font:600 20px var(--mono);font-variant-numeric:tabular-nums}
+
+@media (max-width:760px){
+  .cmp{grid-template-columns:1fr}
+  .lanes{grid-template-columns:1fr}
+  .remote{grid-template-columns:1fr}
+  .remote .arrow{flex-direction:row}
+  h1{font-size:25px}
+}
+@media (prefers-reduced-motion:no-preference){.lane .ref.new{animation:pop .35s ease-out}@keyframes pop{from{transform:translateY(-3px);opacity:.3}to{transform:none;opacity:1}}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">hmz-prover-dev · branch zhengyang-lot-git-workers-claude · 62ceb8e</div>
+  <h1>LOT Git Workers：让 tree 访问不到的机器也能帮忙证明</h1>
+  <p class="lede">平时一棵 LOT tree 只在本机（或它自己的 Slurm 作业）里开 session。Git worker 把一部分 obligation 交给<strong>另一台机器</strong>，而且两边网络互不相通：唯一的共同点是一个 git remote。Tree 仍然是 master，决定发什么出去；交回来的证明照样要过 tree 的 gate。</p>
+</header>
+
+<section id="diff">
+  <div class="eyebrow">1 · 和本地跑的区别</div>
+  <h2>本地：controller 直接管 session。远程：只通过 git 分支交接。</h2>
+  <div class="cmp">
+    <div class="panel">
+      <h3>本地跑</h3>
+      <div class="host">
+        <span class="lbl">同一台机器 / 同一个 Slurm 作业</span>
+        <div class="box tree"><b>LOT tree</b>controller + gate + tree.git</div>
+        <div class="sessions"><span class="chip">PROVE x0005</span><span class="chip">PROVE x0006</span><span class="chip">DEC x0007</span><span class="chip">…</span></div>
+        <div class="note">controller 自己 launch、pause、preempt session；session 做完用 <code>lot offer</code> 直接交给 gate。</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>加上远程 git worker</h3>
+      <div class="remote">
+        <div class="box tree"><b>LOT tree</b><span>和本地完全一样，多一个 gitwork 线程</span></div>
+        <div class="arrow"><span>⇄</span>push / fetch</div>
+        <div class="box git"><b>git remote</b>
+          <div class="refs"><span>lot-orders/…</span><span>lot-claims/…</span><span>lot-results/…</span></div>
+        </div>
+        <div class="arrow"><span>⇄</span>push / fetch</div>
+        <div class="box worker"><b>git worker</b><span><code>git-worker.py</code>，用自己的模型和机器</span></div>
+      </div>
+      <div class="wall">tree 和 worker 之间没有任何直接连接</div>
+      <div class="note">每个状态都是 remote 上的一个分支：tree 发 order、worker 抢 claim、worker 推 result、tree 删分支收回。</div>
+    </div>
+  </div>
+
+  <div class="tbl panel">
+  <table>
+    <thead><tr><th></th><th>本地 session</th><th>远程 git worker</th></tr></thead>
+    <tbody>
+      <tr><th>怎么连</th><td>同一个文件系统，controller 直接起进程</td><td class="hl">只共享一个 git remote（如私有 GitHub repo），双方互不可达</td></tr>
+      <tr><th>谁决定做什么</th><td>controller 调度、抢占、暂停</td><td class="hl">tree 只能“发单”；领不领由 worker 决定，先 push 出 claim 的拿到</td></tr>
+      <tr><th>怎么交证明</th><td><code>lot offer</code> → gate</td><td class="hl">push <code>lot-results/…</code> → tree 拉下来作为 offer 交 gate（<code>external</code>）</td></tr>
+      <tr><th>信任</th><td>gate 检查</td><td class="hl">同一个 gate 重新检查。worker 说什么都不算，只认检查结果</td></tr>
+      <tr><th>环境</th><td>tree 自己的 kit</td><td class="hl">worker 自备同样的 Lean / Mathlib / trusted checker；checker 的 sha256 不一致就不领</td></tr>
+      <tr><th>算力和模型</th><td>tree 的 slot、tree 的账号</td><td class="hl">worker 自己的机器和账号（例：DeepSeek v4.1 flash）</td></tr>
+      <tr><th>怎么知道还活着</th><td>controller 看得到进程</td><td class="hl">claim 每 10 分钟一个 heartbeat commit；30 分钟不动就判 <code>stale</code></td></tr>
+      <tr><th>拆分</th><td>tree 的 DEC</td><td class="hl">可选 <code>--split-depth</code> / <code>--race</code>：worker 自己开一棵小树，交回来仍只是这一个 obligation 的文件</td></tr>
+      <tr><th>不开时</th><td colspan="2">默认关闭。不设 <code>git_workers</code> 的 tree 行为完全不变</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="flow">
+  <div class="eyebrow">2 · 工作过程</div>
+  <h2>一个 order 从发出到落地</h2>
+  <p class="note">按 <code>git_workers=hold</code> 模式（每个 obligation 同一时间只归一方，worker 优先），用配对运行里真实的 o001 做例子。点上面的步骤或用按钮翻页。</p>
+  <div class="panel stepper">
+    <div class="steps" role="tablist" id="steps"></div>
+    <div class="stage">
+      <div class="desc"><h3 id="s-title"></h3><p id="s-text"></p></div>
+      <div class="lanes">
+        <div class="lane tree"><h4>Tree（master）</h4><div id="l-tree"></div></div>
+        <div class="lane git"><h4>git remote</h4><div id="l-git"></div></div>
+        <div class="lane worker"><h4>Worker</h4><div id="l-worker"></div></div>
+      </div>
+      <div class="real" id="s-real"></div>
+      <div class="nav"><button id="prev" type="button">← 上一步</button><button id="next" type="button">下一步 →</button></div>
+    </div>
+  </div>
+
+  <h3>不是每个 order 都落地：其余结局</h3>
+  <div class="ends">
+    <div class="panel"><span class="tag" style="color:var(--muted)">untaken</span><div>5 分钟内没有 worker 领。order 删掉，归 tree；tree 恢复暂停的 session，对话保留，接着做。</div><div class="note">实例：o002、o003，32.7 分钟时恢复 x0009–x0011</div></div>
+    <div class="panel"><span class="tag" style="color:var(--warn)">withdrawn</span><div>obligation 不再需要证明（tree 先证了上层，或它被 superseded）。tree 删掉三个分支，worker 在一个 <code>--poll</code> 内发现后停下，什么都不推。</div><div class="note">实例：o009（o004 被 tree 直接证出）、o015（o002 被直接证出）</div></div>
+    <div class="panel"><span class="tag" style="color:var(--warn)">stale</span><div>claim 30 分钟没有 heartbeat，tree 认为 worker 已经没了，收回。</div></div>
+    <div class="panel"><span class="tag" style="color:var(--warn)">gave-up / lease 到期</span><div>worker 推 <code>gave-up</code>，或 lease（默认 12 h）用完。都归 tree。</div></div>
+    <div class="panel"><span class="tag" style="color:var(--warn)">tree 结束</span><div>不管是证完、到 deadline 还是取消，还在外面的 order 一律撤回。</div></div>
+  </div>
+
+  <h3>hold 模式的规则：不重不漏</h3>
+  <ul class="rules">
+    <li>一个 obligation 最多发出去一次。回来没证出的，永远留在 tree 这边。</li>
+    <li>发出去之后 5 分钟（<code>git_worker_wait</code>）只归 worker；tree 暂停自己在这个 obligation 上的 PROVE / DEC，不开新的，抢占计划也不碰它，gate 拒绝其他 session 对它的 <code>lot offer</code>（409）。</li>
+    <li>tree 自己已经做了超过 5 分钟的 obligation 不会再发出去。</li>
+    <li>只发深度 ≥ <code>git_worker_min_depth</code>、依赖已证完、没标记要继续拆的 obligation，最深的先发。</li>
+  </ul>
+</section>
+
+<section id="run">
+  <div class="eyebrow">3 · 真实运行</div>
+  <h2>putnam_1970_b6 配对运行，2026-11-05</h2>
+  <p class="note">Master 是 Slurm job 48（machP），远程 worker 是 qinz1yang 在 brev 机器上跑的 <code>ziyang-brev-flash</code>，orders repo 是 <code>ZhengyangZhang06/lot-orders-putnam1970b6-pair</code>。14:56 开跑，18:25 证完，官方检查通过。每行是一个 order；鼠标悬停看详情。</p>
+  <div class="facts">
+    <div><strong>16</strong>发出的 order</div>
+    <div><strong>4</strong>被 worker 领走</div>
+    <div><strong>2</strong>worker 证出并落地（o001、o011）</div>
+    <div><strong>3h29m</strong>全程，证明通过官方检查</div>
+  </div>
+  <div class="panel chart">
+    <div class="legend">
+      <span><i style="background:var(--wait)"></i>等人领（5 分钟窗口）</span>
+      <span><i style="background:var(--worker)"></i>worker 在做</span>
+      <span><i style="background:var(--tree)"></i>tree 的 gate 复查</span>
+    </div>
+    <div class="scroll" id="gantt-wrap"><svg id="gantt" role="img" aria-label="16 个 order 的时间线"></svg><div class="tip" id="tip" hidden></div></div>
+  </div>
+  <div class="tbl panel">
+    <table>
+      <thead><tr><th>order</th><th>发出</th><th>被领</th><th>结束</th><th>结局</th><th>说明</th></tr></thead>
+      <tbody id="otable"></tbody>
+    </table>
+  </div>
+</section>
+</div>
+
+<script>
+const STEPS=[
+ {t:"挑选",title:"tree 挑出一个可以外包的 obligation",
+  text:"gitwork 线程每个 git_worker_poll 看一次 tree：要开着、深度 ≥ min_depth、依赖都证完、没发过，最深的先发。",
+  tree:["s001 刚把 root 拆成 o001–o003","o001 开着，tree 自己的 PROVE x0006 刚开始"],git:[],gitNew:[],
+  worker:["每 60 s（--poll）ls-remote 一次，暂时没有单"],
+  real:"14:56:38 开跑。约 27 分钟后 root 拆分完成，o001–o003 满足条件。"},
+ {t:"发单",title:"tree 推一个 order 分支，并让出这个 obligation",
+  text:"order 分支包含此刻的 lib、obligation 的 module（by sorry）和 .lot-order/ORDER.json：冻结的定理陈述、允许改的路径、checker 的 sha256、模型、lease_until。同时 tree 暂停自己在它上面的 session（保留对话），5 分钟窗口开始。",
+  tree:["暂停 x0006（gitwork-paused，对话保留）","o001 不开新 session，抢占计划不碰它","gate 拒绝别人对 o001 的 lot offer"],
+  git:["lot-orders/putnam-1970-b6-pair/o001-1"],gitNew:[0],
+  worker:["还没看到"],
+  real:"15:24:20 发出 o001-1、o002-1、o003-1，暂停 x0005–x0008。"},
+ {t:"领取",title:"worker 抢 claim：只有一个人能推成功",
+  text:"worker 先核对 ORDER.json 里 checker 的 sha256 和自己的一样，再新建 lot-claims 分支。新建分支只有第一个人能推上去，所以多个 worker 不会做同一个单。",
+  tree:["看到 claim → gitwork-claimed","o001 现在归 worker，直到 order 结束"],
+  git:["lot-orders/…/o001-1","lot-claims/…/o001-1"],gitNew:[1],
+  worker:["checker digest 一致 ✓","push 新分支 lot-claims/…/o001-1 ✓"],
+  real:"15:24:52 被 ziyang-brev-flash 领走，发出后 31 秒。o002、o003 没人领，5 分钟后变 untaken，tree 恢复自己的 session。"},
+ {t:"证明",title:"worker 在自己机器上证",
+  text:"checkout 出 order，跑 hmz exec -f lean_remote；每个 turn 后跑 trusted check，失败就把 check 的末尾几行喂回去。可以用 --split-depth / --race 开自己的小树。期间定时推 heartbeat，并检查 order 是否被撤回。",
+  tree:["只看 claim 是否在动","30 min 没 heartbeat → stale，收回","obligation 若不再需要证明 → 撤回"],
+  git:["lot-orders/…/o001-1","lot-claims/…/o001-1  ← heartbeat 每 600 s"],gitNew:[1],
+  worker:["session 1..3，每个最多 12 turn","每个 turn 后跑 trusted check","每 600 s push heartbeat，每 60 s 看是否被撤回"],
+  real:"worker 用 DeepSeek v4.1 flash，--split-depth 1 --race。做了约 64 分钟。"},
+ {t:"交回",title:"worker 推 result 分支",
+  text:"lot-results 分支里有 obligation 的文件、.lot-order/RESULT.json（proved 或 gave-up）和 agent 的 NOTES.md。tree 会把 NOTES 贴到 obligation 的 thread 上。",
+  tree:["fetch 到 result → gitwork-submitted"],
+  git:["lot-orders/…/o001-1","lot-claims/…/o001-1","lot-results/…/o001-1"],gitNew:[2],
+  worker:["trusted check 通过 ✓","push lot-results/…/o001-1（proved）","去找下一个单"],
+  real:"16:29:09 tree 收到 o001 的结果。"},
+ {t:"复查",title:"tree 的 gate 重新检查，和本地 offer 走同一条路",
+  text:"结果作为 offer 交给 gate（offer-submitted，带 external: order）。检查方式和任何本地 session 的证明一样；通过才落地，accepted 记录里写 via git-worker。",
+  tree:["gate 检查 g00006","通过 → landed（via git-worker）"],
+  git:["lot-orders/…/o001-1","lot-claims/…/o001-1","lot-results/…/o001-1"],gitNew:[],
+  worker:["已在做别的"],
+  real:"16:31:03 offer g00006 landed，从收到到落地约 2 分钟。"},
+ {t:"收尾",title:"tree 删掉三个分支，丢掉暂停的 session",
+  text:"order 有了答案就撤回：三个分支都从 remote 删掉。之前暂停的 x0006 不再需要，被 dispose。o001 证完。",
+  tree:["race-paused-disposed x0006","gitwork-ended o001-1 how=landed","o001 ✓ proved"],
+  git:["lot-orders/…/o001-1","lot-claims/…/o001-1","lot-results/…/o001-1"],gitGone:true,gitNew:[],
+  worker:["—"],
+  real:"16:31:10 gitwork-ended landed。后来 worker 又证出了 o011（17:43 落地）。"}
+];
+let cur=0;
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+STEPS.forEach((s,i)=>{const b=document.createElement("button");b.type="button";b.role="tab";b.innerHTML=`<span class="n">${i+1}</span>${s.t}`;b.onclick=()=>show(i);$("steps").appendChild(b)});
+function list(a){return a.length?"<ul>"+a.map(x=>`<li>${esc(x)}</li>`).join("")+"</ul>":'<div class="idle">—</div>'}
+function show(i){
+  cur=i;const s=STEPS[i];
+  [...$("steps").children].forEach((b,j)=>b.setAttribute("aria-selected",j===i));
+  $("s-title").textContent=`${i+1}. ${s.title}`;$("s-text").textContent=s.text;
+  $("l-tree").innerHTML=list(s.tree);$("l-worker").innerHTML=list(s.worker);
+  $("l-git").innerHTML=s.git.length?s.git.map((r,j)=>`<div class="ref ${s.gitGone?"gone":s.gitNew.includes(j)?"new":""}">${esc(r)}</div>`).join("")+(s.gitGone?'<div class="idle">已全部删除</div>':""):'<div class="idle">只有 main</div>';
+  $("s-real").innerHTML="<b>真实记录：</b>"+esc(s.real);
+  $("prev").disabled=i===0;$("next").disabled=i===STEPS.length-1;
+}
+$("prev").onclick=()=>show(Math.max(0,cur-1));$("next").onclick=()=>show(Math.min(STEPS.length-1,cur+1));
+show(0);
+
+/* real data: minutes from 14:56:38 UTC; [order, issued, claimed, submitted, ended, how, note] */
+const T0=14*60+56+38/60, END=208.8;
+const O=[
+["o001-1",27.7,28.2,92.5,94.5,"landed","worker 证出；tree 暂停的 x0006 被丢弃"],
+["o002-1",27.7,null,null,32.7,"untaken","tree 恢复 x0009/x0011，后来自己证出"],
+["o003-1",27.7,null,null,32.7,"untaken","tree 恢复 x0010"],
+["o004-2",74.4,null,null,79.4,"untaken","第一次推送冲突（o004-1），重试时编号变成 -2"],
+["o005-2",74.4,null,null,79.4,"untaken","同上，推送冲突后重发"],
+["o006-1",75.4,null,null,80.4,"untaken",""],
+["o007-1",79.4,null,null,84.4,"untaken",""],
+["o008-1",79.4,null,null,84.4,"untaken",""],
+["o009-1",115.6,116.1,null,136.2,"withdrawn","tree 先直接证出了父节点 o004，o009 不再需要证明"],
+["o010-1",115.6,null,null,120.6,"untaken",""],
+["o011-1",138.7,139.3,165.0,166.4,"landed","worker 证出"],
+["o012-1",138.7,null,null,143.8,"untaken","tree 恢复 x0035"],
+["o013-1",138.7,null,null,143.8,"untaken",""],
+["o014-1",138.7,null,null,143.8,"untaken",""],
+["o015-1",173.0,174.0,null,204.2,"withdrawn","tree 直接证出了 o002，o015 被 superseded"],
+["o016-1",173.0,null,null,178.0,"untaken",""]];
+const HOW={landed:"落地",untaken:"没人领 → 归 tree",withdrawn:"撤回"};
+const clock=m=>{const t=T0+m;const h=Math.floor(t/60),mm=Math.floor(t%60),ss=Math.round((t%1)*60);return `${String(h).padStart(2,"0")}:${String(mm).padStart(2,"0")}`};
+const dur=m=>m<60?`${Math.round(m)} 分钟`:`${Math.floor(m/60)}h${String(Math.round(m%60)).padStart(2,"0")}m`;
+(function gantt(){
+  const L=64,R=150,W=860,rowH=24,top=26,H=top+O.length*rowH+30,pw=W-L-R;
+  const x=m=>L+m/END*pw;
+  const svg=$("gantt");svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.setAttribute("width",W);svg.setAttribute("height",H);svg.style.display="block";svg.style.minWidth="640px";svg.style.width="100%";svg.style.height="auto";
+  let s="";
+  for(const c of [3.4,63.4,123.4,183.4]){s+=`<line x1="${x(c)}" x2="${x(c)}" y1="${top-6}" y2="${H-26}" stroke="var(--line)"/><text x="${x(c)}" y="${H-10}" font-size="11" fill="var(--muted)" text-anchor="middle">${clock(c)} UTC</text>`}
+  s+=`<line x1="${x(0)}" x2="${x(0)}" y1="${top-6}" y2="${H-26}" stroke="var(--ink2)"/><text x="${x(0)}" y="14" font-size="11" fill="var(--ink2)">开跑 14:56</text>`;
+  s+=`<line x1="${x(END)}" x2="${x(END)}" y1="${top-6}" y2="${H-26}" stroke="var(--ok)" stroke-dasharray="3 3"/><text x="${x(END)}" y="14" font-size="11" fill="var(--ok)" text-anchor="end">18:25 证完</text>`;
+  O.forEach((o,i)=>{
+    const [id,iss,cl,sub,end,how]=o;const y=top+i*rowH,cy=y+rowH/2,h=10;
+    s+=`<g class="row" data-i="${i}"><rect x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent"/>`;
+    s+=`<text x="${L-8}" y="${cy+4}" font-size="11.5" fill="var(--ink)" text-anchor="end">${id}</text>`;
+    const wEnd=cl??end;
+    s+=`<rect x="${x(iss)}" y="${cy-h/2}" width="${Math.max(2,x(wEnd)-x(iss))}" height="${h}" rx="2" fill="var(--wait)"/>`;
+    if(cl!=null){const wk=sub??end;s+=`<rect x="${x(cl)+1}" y="${cy-h/2}" width="${Math.max(2,x(wk)-x(cl)-1)}" height="${h}" rx="2" fill="var(--worker)"/>`;
+      if(sub!=null)s+=`<rect x="${x(sub)+2}" y="${cy-h/2}" width="${Math.max(3,x(end)-x(sub)-2)}" height="${h}" rx="2" fill="var(--tree)"/>`;}
+    const col=how==="landed"?"var(--ok)":how==="withdrawn"?"var(--warn)":"var(--muted)";
+    const mark=how==="landed"?"✓ 落地":how==="withdrawn"?"× 撤回":"untaken";
+    s+=`<text x="${x(end)+6}" y="${cy+4}" font-size="11" fill="${col}">${mark}</text></g>`;
+  });
+  svg.innerHTML=s;
+  const tip=$("tip"),wrap=$("gantt-wrap");
+  svg.querySelectorAll(".row").forEach(g=>{
+    g.addEventListener("mousemove",e=>{const o=O[+g.dataset.i];const [id,iss,cl,sub,end,how,note]=o;
+      tip.innerHTML=`<b>${id}</b> · ${HOW[how]}<br>发出 ${clock(iss)}${cl!=null?`，${Math.round((cl-iss)*60)} 秒后被领`:"，没人领"}<br>${cl!=null?`worker 做了 ${dur((sub??end)-cl)}<br>`:""}结束 ${clock(end)}${note?`<br><span style="color:var(--ink2)">${esc(note)}</span>`:""}`;
+      tip.hidden=false;const r=wrap.getBoundingClientRect();let lx=e.clientX-r.left+wrap.scrollLeft+12;if(lx>wrap.scrollWidth-310)lx-=330;tip.style.left=lx+"px";tip.style.top=(e.clientY-r.top+12)+"px";
+      g.querySelector("rect").setAttribute("fill","var(--git-soft)")});
+    g.addEventListener("mouseleave",()=>{tip.hidden=true;g.querySelector("rect").setAttribute("fill","transparent")});
+  });
+  $("otable").innerHTML=O.map(([id,iss,cl,sub,end,how,note])=>`<tr><td class="mono">${id}</td><td class="mono">${clock(iss)}</td><td class="mono">${cl!=null?clock(cl):"—"}</td><td class="mono">${clock(end)}</td><td>${HOW[how]}</td><td>${esc(note)}</td></tr>`).join("");
+})();
+</script>
+</body>
+</html>
