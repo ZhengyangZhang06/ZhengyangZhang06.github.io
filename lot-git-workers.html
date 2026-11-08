@@ -116,6 +116,27 @@ svg text{font-family:var(--mono)}
   h1{font-size:25px}
 }
 @media (prefers-reduced-motion:no-preference){.lane .ref.new{animation:pop .35s ease-out}@keyframes pop{from{transform:translateY(-3px);opacity:.3}to{transform:none;opacity:1}}}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.role{padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0;font-size:14px}
+.role ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px}
+.tag{font:500 12px var(--mono);letter-spacing:.04em;text-transform:uppercase}
+pre{margin:0;overflow-x:auto;font:12px/1.55 var(--mono);background:var(--git-soft);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+pre.panel{background:var(--panel)}
+pre code{font-size:inherit}
+.cm{color:var(--muted)}
+.ctrl{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ctrl button{font:500 13px var(--sans);padding:6px 14px;border-radius:6px;border:1px solid var(--ink2);background:var(--panel);color:var(--ink);cursor:pointer;min-width:92px}
+.ctrl button:focus-visible,.evlog button:focus-visible{outline:2px solid var(--tree);outline-offset:1px}
+.ctrl input{flex:1;min-width:160px;accent-color:var(--tree)}
+#tclock{font-variant-numeric:tabular-nums;color:var(--ink2)}
+.tcap{font-size:14px;min-height:2.6em;border-left:3px solid var(--tree);padding-left:10px}
+.legend i.ring{background:none;border:2px solid;border-radius:50%;width:11px;height:11px}
+.legend i.dot{border-radius:50%;width:11px;height:11px}
+.evlog{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto;border-top:1px solid var(--line)}
+.evlog button{display:grid;grid-template-columns:48px 56px 1fr;gap:8px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:6px 4px;font:13px/1.5 var(--sans);color:var(--ink2);cursor:pointer}
+.evlog button .mono{font-size:12px}
+.evlog li.cur button{background:var(--tree-soft);color:var(--ink)}
+@media (max-width:760px){.roles{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -173,8 +194,80 @@ svg text{font-family:var(--mono)}
   </div>
 </section>
 
+<section id="collab">
+  <div class="eyebrow">2 · How the collaboration is set up</div>
+  <h2>One git repository is the only channel</h2>
+  <p>The master (whoever runs the tree) and the collaborator (whoever runs a worker) share nothing but one git repository, here a private GitHub repo. No SSH, no VPN, no shared disk, no open port on either machine. The collaborator only needs push access to that repo: the master invites them as a GitHub collaborator.</p>
+
+  <div class="roles">
+    <div class="panel role">
+      <span class="tag t">Master · once</span>
+      <ol>
+        <li>Create the orders repo with a <code>main</code> branch (a README is enough; it must not be empty, or the first order could never be deleted).</li>
+        <li>Put the worker kit on <code>main</code>: README, <code>setup.sh</code>, <code>worker.sh</code>, the trusted checker byte for byte (with its <code>sha256</code>), and a release with the LOT and hmz sources.</li>
+        <li>Invite the collaborator.</li>
+        <li>Start (or revive) the tree with git workers on:</li>
+      </ol>
+<pre><code>ltree run --name putnam-1970-b6-pair ... \
+  --param git_workers=hold \
+  --param git_remote=https://github.com/&lt;org&gt;/&lt;orders-repo&gt; \
+  --param git_worker_model=claude/deepseek-v4.1-flash:max \
+  --param git_worker_min_depth=1 \
+  --param git_worker_wait=300 --param git_worker_lease=6h \
+  --param git_worker_poll=30</code></pre>
+    </div>
+    <div class="panel role">
+      <span class="tag w">Collaborator · once, about 1 h</span>
+      <ol>
+        <li>Accept the invitation; <code>gh auth login</code>.</li>
+        <li>Clone the orders repo and run <code>bash setup.sh</code>: it downloads LOT and hmz from the release, checks their SHA256 and the checker's, and builds the same Lean, Mathlib and checker tools at the same absolute paths the checker names.</li>
+        <li>Set up an agent CLI (Claude Code pointed at DeepSeek here, or any model).</li>
+        <li>Start the worker <strong>before</strong> the master puts orders out (an order waits only 5 minutes):</li>
+      </ol>
+<pre><code>WORKER_ID=ziyang-brev-flash bash worker.sh
+# which runs:
+python3 -I lean_option_tree/docker/git-worker.py \
+  --remote https://github.com/&lt;org&gt;/&lt;orders-repo&gt; \
+  --tree putnam-1970-b6-pair --id "$WORKER_ID" \
+  --model claude/deepseek-v4.1-flash:max \
+  --split-depth 1 --race --poll 30 --heartbeat 300</code></pre>
+    </div>
+  </div>
+
+  <h3>How an order is put out</h3>
+  <p class="note">Every <code>git_worker_poll</code> the tree looks for obligations it may hand out: open, at depth ≥ <code>git_worker_min_depth</code>, all dependencies proved, not marked split-further, never sent before, and not already worked on by the tree for more than 5 minutes. The deepest go first, up to <code>git_worker_orders</code> at a time. For each, it commits a snapshot in its own git and pushes it as a branch. Everything else in the exchange is a branch too:</p>
+  <div class="tbl panel">
+  <table>
+    <thead><tr><th>Branch</th><th>Pushed by</th><th>What is in it</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">lot-orders/&lt;tree&gt;/&lt;obl&gt;-&lt;n&gt;</td><td><span class="t">master</span></td><td>The lib at that moment, the obligation's module with <code>by sorry</code>, <code>.lot-order/ORDER.json</code> and <code>.lot-order/ISSUE.md</code> (the task in words).</td></tr>
+      <tr><td class="mono">lot-claims/&lt;tree&gt;/&lt;obl&gt;-&lt;n&gt;</td><td><span class="w">worker</span></td><td>Created to take the order: creating a branch only succeeds for the first pusher, so exactly one worker gets it. Then one <code>heartbeat</code> commit every <code>--heartbeat</code> seconds.</td></tr>
+      <tr><td class="mono">lot-results/&lt;tree&gt;/&lt;obl&gt;-&lt;n&gt;</td><td><span class="w">worker</span></td><td>The obligation's files, <code>.lot-order/RESULT.json</code> (<code>proved</code> or <code>gave-up</code>) and the agent's <code>NOTES.md</code>.</td></tr>
+      <tr><td class="mono">status</td><td><span class="t">master</span></td><td>Optional <code>STATUS.md</code>, rewritten every 2 minutes: who holds each node, each order's state, recent events. What the collaborator reads to follow along.</td></tr>
+      <tr><td class="mono">main</td><td><span class="t">master</span></td><td>The worker kit. Orders never touch it.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">The master deletes an order's three branches when it ends (landed, untaken, withdrawn, stale, lease over, or the tree ends), so the repo only ever shows what is live. A worker sees its order disappear within one <code>--poll</code> and stops.</p>
+
+  <h3>What an order says (<code>.lot-order/ORDER.json</code>, o001-1, abridged)</h3>
+<pre class="panel"><code>{
+  "tree": "putnam-1970-b6-pair",   "order": "o001-1",   "obl": "o001",
+  "lean_name": "pitot",
+  "lean_statement": "∀ (L : ZMod 4 → EuclideanSpace ℝ (Fin 2)) ... → dist (L 0) (L 1) + dist (L 2) (L 3)
+                     = dist (L 1) (L 2) + dist (L 3) (L 0)",     <span class="cm">// frozen: the worker cannot change it</span>
+  "module_path": "Submission/Obl/pitot.lean",
+  "owned": ["Submission/Obl/pitot.lean", "Submission/Obl/pitot/"],   <span class="cm">// the only paths it may write</span>
+  "lib": "a6cee2cb…",                     <span class="cm">// the lib commit it builds on</span>
+  "checker": {"check.sh": "sha256…", "pristine.tar": "sha256…", "protected.sha256": "sha256…"},
+                                           <span class="cm">// worker refuses the order if its checker differs</span>
+  "model": "claude/deepseek-v4.1-flash:max",
+  "issued": 1793892261,  "lease_until": 1793913861    <span class="cm">// 6 h lease</span>
+}</code></pre>
+</section>
+
 <section id="flow">
-  <div class="eyebrow">2 · How it works</div>
+  <div class="eyebrow">3 · How it works</div>
   <h2>One order, from going out to landing</h2>
   <p class="note">In <code>git_workers=hold</code> mode (each obligation belongs to one side at a time, workers first), using the real o001 from the paired run. Click a step above, or use the buttons.</p>
   <div class="panel stepper">
@@ -210,9 +303,9 @@ svg text{font-family:var(--mono)}
 </section>
 
 <section id="run">
-  <div class="eyebrow">3 · A real run</div>
+  <div class="eyebrow">4 · A real run</div>
   <h2>putnam_1970_b6 paired run, 2026-11-05</h2>
-  <p class="note">The master was Slurm job 48 (machP); the remote worker was <code>ziyang-brev-flash</code>, run by qinz1yang on a brev machine; the orders repo was <code>ZhengyangZhang06/lot-orders-putnam1970b6-pair</code>. Started 14:56, proved 18:25, official check passed. Each row is one order; hover for details.</p>
+  <p class="note">The master was Slurm job 48 (machP); the remote worker was <code>ziyang-brev-flash</code>, run by qinz1yang on a brev machine; the orders repo was <code>ZhengyangZhang06/lot-orders-putnam1970b6-pair</code>. Started 14:56, proved 18:25, official check passed. Below, the proof tree is on the left and each obligation's timeline is on the same row to the right. Drag the slider, press Play, or click an event.</p>
   <div class="facts">
     <div><strong>16</strong>orders put out</div>
     <div><strong>4</strong>taken by the worker</div>
@@ -220,12 +313,23 @@ svg text{font-family:var(--mono)}
     <div><strong>3h29m</strong>total, proof passed the official check</div>
   </div>
   <div class="panel chart">
-    <div class="legend">
-      <span><i style="background:var(--wait)"></i>waiting to be taken (5-min window)</span>
-      <span><i style="background:var(--worker)"></i>worker working</span>
-      <span><i style="background:var(--tree)"></i>tree's gate re-checking</span>
+    <div class="ctrl">
+      <button id="play" type="button">▶ Play</button>
+      <input id="tslider" type="range" min="0" max="208.8" step="0.1" value="208.8" aria-label="Time in the run">
+      <span id="tclock" class="mono"></span>
     </div>
-    <div class="scroll" id="gantt-wrap"><svg id="gantt" role="img" aria-label="Timeline of 16 orders"></svg><div class="tip" id="tip" hidden></div></div>
+    <div id="tcap" class="tcap"></div>
+    <div class="scroll"><svg id="replay" role="img" aria-label="Proof tree and per-obligation timeline of the paired run"></svg></div>
+    <div class="legend">
+      <span><i class="ring" style="border-color:var(--tree)"></i>tree working on it</span>
+      <span><i class="ring" style="border-color:var(--tree);border-style:dashed"></i>split, waiting on children</span>
+      <span><i style="background:var(--wait)"></i>order out (5-min window)</span>
+      <span><i style="background:var(--worker)"></i>worker has it</span>
+      <span><i class="dot" style="background:var(--tree)"></i>proved by the tree</span>
+      <span><i class="dot" style="background:var(--worker)"></i>proved by the worker</span>
+      <span><i class="ring" style="border-color:var(--muted);border-style:dotted"></i>superseded</span>
+    </div>
+    <ol class="evlog" id="evlog"></ol>
   </div>
   <div class="tbl panel">
     <table>
@@ -316,40 +420,140 @@ const O=[
 ["o014-1",138.7,null,null,143.8,"untaken",""],
 ["o015-1",173.0,174.0,null,204.2,"withdrawn","The tree proved o002 directly; o015 was superseded"],
 ["o016-1",173.0,null,null,178.0,"untaken",""]];
+/* the proof tree, DFS order: [id, parent, depth, lean name, appears, done, done how, split at] */
+const N=[
+["root",null,0,"putnam_1970_b6",0,204.0,"tree",27.7],
+["o001","root",1,"pitot",27.7,94.4,"worker",null],
+["o002","root",1,"bretschneider",27.7,203.9,"tree",75.4],
+["o006","o002",2,"quad_area_split",75.4,203.9,"super",138.7],
+["o011","o006",3,"quad_extreme_points",138.7,166.4,"worker",null],
+["o012","o006",3,"quad_diagonals_cross",138.7,203.9,"super",173.0],
+["o015","o012",4,"crossing_of_opposite_oangle_sign",173.0,203.9,"super",null],
+["o016","o012",4,"convexHull_inter_line_of_notMem_convexHull",173.0,194.1,"tree",null],
+["o013","o006",3,"convexHull_union_of_crossing",138.7,154.6,"tree",null],
+["o014","o006",3,"convexHull_inter_of_crossing",138.7,161.9,"tree",null],
+["o007","o002",2,"triangle_area_height",75.4,115.6,"tree",null],
+["o008","o002",2,"dist_affineSpan_pair",75.4,130.7,"tree",null],
+["o003","root",1,"cospherical_of_angle_sum",27.7,138.2,"tree",73.9],
+["o004","o003",2,"convex_position",73.9,136.2,"tree",115.6],
+["o009","o004",3,"wSameSide_of_segment_interior_disjoint",115.6,136.2,"super",null],
+["o010","o004",3,"sOppSide_of_wSameSide_of_wSameSide",115.6,136.2,"super",null],
+["o005","o003",2,"cospherical_of_angle_sum_of_opposite_sides",73.9,93.0,"tree",null]];
+const EV=[
+[0.0,"tree","The tree starts on root: its own PROVE and DEC sessions."],
+[27.7,"tree","Root is split into o001–o003. Orders o001-1, o002-1, o003-1 go out; the tree pauses its 4 sessions on them."],
+[28.2,"worker","The worker claims o001-1, 31 s after it went out."],
+[32.7,"tree","Nobody took o002 and o003 in 5 min: untaken. The tree resumes its paused sessions with their conversations."],
+[73.9,"tree","o003 is split into o004, o005. The first pushes collide; they go out as o004-2, o005-2."],
+[75.4,"tree","o002 is split into o006–o008; o006 goes out."],
+[79.4,"tree","o004, o005 untaken; o007, o008 go out."],
+[84.4,"tree","o006–o008 untaken: all back with the tree."],
+[93.0,"tree","The tree proves o005."],
+[94.4,"worker","The worker's proof of o001 passes the tree's gate and lands. The tree's paused x0006 is dropped."],
+[115.6,"tree","The tree proves o007. o004 is split into o009, o010; both go out and the worker claims o009."],
+[120.6,"tree","o010 untaken."],
+[130.7,"tree","The tree proves o008."],
+[136.2,"tree","The tree proves o004 outright, so o009 and o010 are superseded. The worker's o009 is withdrawn mid-work."],
+[138.2,"tree","o003 is proved through its split (o004 + o005)."],
+[138.7,"tree","o006 is split into o011–o014; all four go out. The worker claims o011."],
+[143.8,"tree","o012–o014 untaken."],
+[154.6,"tree","The tree proves o013."],
+[161.9,"tree","The tree proves o014."],
+[166.4,"worker","The worker's proof of o011 lands."],
+[173.0,"tree","o012 is split into o015, o016; both go out. The worker claims o015 a minute later."],
+[178.0,"tree","o016 untaken."],
+[194.1,"tree","The tree proves o016."],
+[203.9,"tree","The tree proves o002 outright (x0009: the session paused for o002's order, resumed when it went untaken). o006, o012, o015 are superseded; the worker's o015 is withdrawn. Root is proved through its split."],
+[208.8,"tree","Final review done: putnam_1970_b6 proved in 3h29m."]];
 const HOW={landed:"landed",untaken:"untaken → tree's",withdrawn:"withdrawn"};
 const clock=m=>{const t=T0+m;const h=Math.floor(t/60),mm=Math.floor(t%60);return `${String(h).padStart(2,"0")}:${String(mm).padStart(2,"0")}`};
-const dur=m=>m<60?`${Math.round(m)} min`:`${Math.floor(m/60)}h${String(Math.round(m%60)).padStart(2,"0")}m`;
-(function gantt(){
-  const L=64,R=150,W=860,rowH=24,top=26,H=top+O.length*rowH+30,pw=W-L-R;
-  const x=m=>L+m/END*pw;
-  const svg=$("gantt");svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.setAttribute("width",W);svg.setAttribute("height",H);svg.style.display="block";svg.style.minWidth="640px";svg.style.width="100%";svg.style.height="auto";
+const since=m=>`+${Math.floor(m/60)}h${String(Math.floor(m%60)).padStart(2,"0")}m`;
+const ord={};O.forEach(o=>{ord[o[0].split("-")[0]]=o});
+
+const W=1000,TW=400,X0=420,X1=984,RH=26,TOP=36,H=TOP+N.length*RH+30;
+const xt=m=>X0+m/END*(X1-X0);
+const row={};N.forEach((n,i)=>row[n[0]]=i);
+const ny=i=>TOP+i*RH+RH/2, nx=d=>18+d*24;
+function stateAt(n,t){
+  const [id,,,,app,done,how,split]=n;
+  if(t<app)return null;
+  if(t>=done)return how==="super"?"super":how==="worker"?"pw":"pt";
+  const o=ord[id];
+  if(o){const [,iss,cl,sub,end]=o;
+    if(t>=iss&&t<(cl??end))return "out";
+    if(cl!=null&&t>=cl&&t<end)return sub!=null&&t>=sub?"gate":"worker";}
+  return split!=null&&t>=split?"split":"tree";
+}
+const LBL={tree:"tree working",split:"split",out:"order out",worker:"worker has it",gate:"gate re-check",pt:"✓ by tree",pw:"✓ by worker",super:"superseded"};
+const LCOL={tree:"var(--tree)",split:"var(--tree)",out:"var(--muted)",worker:"var(--worker)",gate:"var(--tree)",pt:"var(--tree)",pw:"var(--worker)",super:"var(--muted)"};
+function timelineMarks(){
   let s="";
-  for(const c of [3.4,63.4,123.4,183.4]){s+=`<line x1="${x(c)}" x2="${x(c)}" y1="${top-6}" y2="${H-26}" stroke="var(--line)"/><text x="${x(c)}" y="${H-10}" font-size="11" fill="var(--muted)" text-anchor="middle">${clock(c)} UTC</text>`}
-  s+=`<line x1="${x(0)}" x2="${x(0)}" y1="${top-6}" y2="${H-26}" stroke="var(--ink2)"/><text x="${x(0)}" y="14" font-size="11" fill="var(--ink2)">start 14:56</text>`;
-  s+=`<line x1="${x(END)}" x2="${x(END)}" y1="${top-6}" y2="${H-26}" stroke="var(--ok)" stroke-dasharray="3 3"/><text x="${x(END)}" y="14" font-size="11" fill="var(--ok)" text-anchor="end">proved 18:25</text>`;
-  O.forEach((o,i)=>{
-    const [id,iss,cl,sub,end,how]=o;const y=top+i*rowH,cy=y+rowH/2,h=10;
-    s+=`<g class="row" data-i="${i}"><rect x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent"/>`;
-    s+=`<text x="${L-8}" y="${cy+4}" font-size="11.5" fill="var(--ink)" text-anchor="end">${id}</text>`;
-    const wEnd=cl??end;
-    s+=`<rect x="${x(iss)}" y="${cy-h/2}" width="${Math.max(2,x(wEnd)-x(iss))}" height="${h}" rx="2" fill="var(--wait)"/>`;
-    if(cl!=null){const wk=sub??end;s+=`<rect x="${x(cl)+1}" y="${cy-h/2}" width="${Math.max(2,x(wk)-x(cl)-1)}" height="${h}" rx="2" fill="var(--worker)"/>`;
-      if(sub!=null)s+=`<rect x="${x(sub)+2}" y="${cy-h/2}" width="${Math.max(3,x(end)-x(sub)-2)}" height="${h}" rx="2" fill="var(--tree)"/>`;}
-    const col=how==="landed"?"var(--ok)":how==="withdrawn"?"var(--warn)":"var(--muted)";
-    const mark=how==="landed"?"✓ landed":how==="withdrawn"?"× withdrawn":"untaken";
-    s+=`<text x="${x(end)+6}" y="${cy+4}" font-size="11" fill="${col}">${mark}</text></g>`;
+  N.forEach((n,i)=>{const [id,,,,app,done,how]=n;const y=ny(i);const o=ord[id];
+    const spans=o?[[app,o[1]],[o[4],done]]:[[app,done]];
+    for(const [a,b] of spans)if(b>a)s+=`<rect x="${xt(a)}" y="${y-2}" width="${xt(b)-xt(a)}" height="4" rx="2" fill="var(--tree)" opacity=".55"/>`;
+    if(o){const [,iss,cl,sub,end]=o;
+      s+=`<rect x="${xt(iss)}" y="${y-5}" width="${Math.max(2,xt(cl??end)-xt(iss))}" height="10" rx="2" fill="var(--wait)"/>`;
+      if(cl!=null){s+=`<rect x="${xt(cl)+1}" y="${y-5}" width="${Math.max(2,xt(sub??end)-xt(cl)-1)}" height="10" rx="2" fill="var(--worker)"/>`;
+        if(sub!=null)s+=`<rect x="${xt(sub)+2}" y="${y-5}" width="${Math.max(3,xt(end)-xt(sub)-2)}" height="10" rx="2" fill="var(--tree)"/>`;}}
+    s+=how==="super"?`<text x="${xt(done)}" y="${y+4}" font-size="11" fill="var(--muted)" text-anchor="middle">×</text>`
+      :`<circle cx="${xt(done)}" cy="${y}" r="4.5" fill="${how==="worker"?"var(--worker)":"var(--tree)"}" stroke="var(--panel)" stroke-width="2"/>`;
   });
-  svg.innerHTML=s;
-  const tip=$("tip"),wrap=$("gantt-wrap");
-  svg.querySelectorAll(".row").forEach(g=>{
-    g.addEventListener("mousemove",e=>{const o=O[+g.dataset.i];const [id,iss,cl,sub,end,how,note]=o;
-      tip.innerHTML=`<b>${id}</b> · ${HOW[how]}<br>out ${clock(iss)}${cl!=null?`, taken ${Math.round((cl-iss)*60)} s later`:", nobody took it"}<br>${cl!=null?`worker worked ${dur((sub??end)-cl)}<br>`:""}ended ${clock(end)}${note?`<br><span style="color:var(--ink2)">${esc(note)}</span>`:""}`;
-      tip.hidden=false;const r=wrap.getBoundingClientRect();let lx=e.clientX-r.left+wrap.scrollLeft+12;if(lx>wrap.scrollWidth-310)lx-=330;tip.style.left=lx+"px";tip.style.top=(e.clientY-r.top+12)+"px";
-      g.querySelector("rect").setAttribute("fill","var(--git-soft)")});
-    g.addEventListener("mouseleave",()=>{tip.hidden=true;g.querySelector("rect").setAttribute("fill","transparent")});
+  return s;
+}
+const svg=$("replay");
+svg.setAttribute("viewBox",`0 0 ${W} ${H}`);Object.assign(svg.style,{display:"block",width:"100%",height:"auto",minWidth:"760px"});
+let base=`<text x="8" y="16" font-size="11" fill="var(--muted)" font-weight="500">PROOF TREE</text><text x="${X0}" y="16" font-size="11" fill="var(--muted)" font-weight="500">TIMELINE (UTC)</text>`;
+base+=`<line x1="${TW+8}" x2="${TW+8}" y1="6" y2="${H-6}" stroke="var(--line)"/>`;
+for(const c of [3.4,63.4,123.4,183.4])base+=`<line x1="${xt(c)}" x2="${xt(c)}" y1="${TOP-8}" y2="${H-24}" stroke="var(--line)"/><text x="${xt(c)}" y="${H-8}" font-size="11" fill="var(--muted)" text-anchor="middle">${clock(c)}</text>`;
+N.forEach((n,i)=>{if(i%2)base+=`<rect x="0" y="${TOP+i*RH}" width="${W}" height="${RH}" fill="var(--git-soft)" opacity=".5"/>`});
+const marks=timelineMarks();
+base+=`<defs><clipPath id="past"><rect id="pastr" x="0" y="0" width="${X0}" height="${H}"/></clipPath></defs>`;
+base+=`<g opacity=".16">${marks}</g><g clip-path="url(#past)">${marks}</g>`;
+base+=`<g id="treeg"></g><line id="ph" y1="${TOP-10}" y2="${H-24}" stroke="var(--ink)" stroke-width="1.5"/><text id="phl" y="${TOP-14}" font-size="11" fill="var(--ink)" text-anchor="middle"></text>`;
+svg.innerHTML=base;
+function drawTree(t){
+  let s="";
+  N.forEach((n,i)=>{const [id,par,d,name]=n;const st=stateAt(n,t);if(!st||!par)return;
+    const p=row[par],px=nx(d-1),cx=nx(d),y=ny(i);
+    s+=`<path d="M${px} ${ny(p)+7} V${y} H${cx-7}" fill="none" stroke="var(--muted)" stroke-opacity=".6"/>`;});
+  N.forEach((n,i)=>{const [id,,d,name]=n;const st=stateAt(n,t);const x=nx(d),y=ny(i);
+    if(!st){s+=`<text x="${x-4}" y="${y+4}" font-size="11.5" fill="var(--muted)" opacity=".35">${id}</text>`;return;}
+    const col=LCOL[st];
+    const filled=st==="pt"||st==="pw";
+    const dash=st==="split"?' stroke-dasharray="3 2"':st==="super"?' stroke-dasharray="1.5 2"':"";
+    s+=`<circle cx="${x}" cy="${y}" r="6" fill="${filled?col:st==="out"?"var(--wait)":"var(--panel)"}" stroke="${col}" stroke-width="2"${dash}/>`;
+    const lx=x+12,max=Math.floor((296-lx-36)/6.6);
+    const nm=name.length>max?name.slice(0,max-1)+"…":name;
+    s+=`<text x="${lx}" y="${y+4}" font-size="11.5" fill="var(--ink)"${st==="super"?' text-decoration="line-through" opacity=".6"':""}>${id} <tspan fill="var(--muted)">${nm}</tspan></text>`;
+    s+=`<text x="${TW-2}" y="${y+4}" font-size="11" fill="${col}" text-anchor="end" font-weight="500">${LBL[st]}</text>`;
   });
-  $("otable").innerHTML=O.map(([id,iss,cl,sub,end,how,note])=>`<tr><td class="mono">${id}</td><td class="mono">${clock(iss)}</td><td class="mono">${cl!=null?clock(cl):"—"}</td><td class="mono">${clock(end)}</td><td>${HOW[how]}</td><td>${esc(note)}</td></tr>`).join("");
-})();
+  $("treeg").innerHTML=s;
+}
+const evlog=$("evlog");
+evlog.innerHTML=EV.map(([t,side,txt],i)=>`<li><button type="button" data-i="${i}"><span class="mono">${clock(t)}</span><span class="${side==="worker"?"w":"t"}">${side}</span><span>${txt}</span></button></li>`).join("");
+evlog.addEventListener("click",e=>{const b=e.target.closest("button");if(b){stop();setT(EV[+b.dataset.i][0]+0.05)}});
+let T=END;
+function setT(t){
+  T=Math.max(0,Math.min(END,t));
+  $("tslider").value=T;
+  $("pastr").setAttribute("width",xt(T));
+  $("ph").setAttribute("x1",xt(T));$("ph").setAttribute("x2",xt(T));
+  const pl=$("phl");pl.setAttribute("x",Math.min(X1-14,Math.max(X0+14,xt(T))));pl.textContent=clock(T);
+  $("tclock").textContent=`${clock(T)} UTC · ${since(T)}`;
+  drawTree(T);
+  let k=-1;EV.forEach((e,i)=>{if(e[0]<=T+1e-9)k=i});
+  $("tcap").textContent=k>=0?`${clock(EV[k][0])} · ${EV[k][2]}`:"";
+  [...evlog.children].forEach((li,i)=>li.classList.toggle("cur",i===k));
+}
+let raf=null,last=0;
+function stop(){if(raf)cancelAnimationFrame(raf);raf=null;$("play").textContent="▶ Play"}
+function tick(ts){if(last)setT(T+(ts-last)/1000*(END/45));last=ts;if(T>=END){stop();return}raf=requestAnimationFrame(tick)}
+$("play").onclick=()=>{if(raf){stop();return}if(T>=END)setT(0);last=0;$("play").textContent="❚❚ Pause";raf=requestAnimationFrame(tick)};
+$("tslider").addEventListener("input",e=>{stop();setT(+e.target.value)});
+setT(END);
+
+$("otable").innerHTML=O.map(([id,iss,cl,sub,end,how,note])=>`<tr><td class="mono">${id}</td><td class="mono">${clock(iss)}</td><td class="mono">${cl!=null?clock(cl):"—"}</td><td class="mono">${clock(end)}</td><td>${HOW[how]}</td><td>${esc(note)}</td></tr>`).join("");
+
 </script>
 </body>
 </html>
