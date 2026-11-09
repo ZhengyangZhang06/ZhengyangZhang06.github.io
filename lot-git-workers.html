@@ -116,6 +116,12 @@ svg text{font-family:var(--mono)}
   h1{font-size:25px}
 }
 @media (prefers-reduced-motion:no-preference){.lane .ref.new{animation:pop .35s ease-out}@keyframes pop{from{transform:translateY(-3px);opacity:.3}to{transform:none;opacity:1}}}
+.answer{padding:6px 18px;display:flex;flex-direction:column}
+.qa{display:grid;grid-template-columns:220px 1fr;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.qa:last-child{border-bottom:0}
+.qa .q{font-weight:600}
+td.mono{white-space:nowrap;font-size:12px}
+@media (max-width:760px){.qa{grid-template-columns:1fr;gap:4px}}
 .roles{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .role{padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0;font-size:14px}
 .role ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px}
@@ -144,7 +150,7 @@ pre code{font-size:inherit}
 <header>
   <div class="eyebrow">hmz-prover-dev · branch zhengyang-lot-git-workers-claude · 62ceb8e</div>
   <h1>LOT Git Workers: machines the tree cannot reach can help prove</h1>
-  <p class="lede">Normally a LOT tree runs its sessions only on its own host (or in its own Slurm job). Git workers hand some obligations to <strong>another machine</strong>, and the two sides cannot reach each other over the network: all they share is one git remote. The tree stays the master and decides what goes out; a proof that comes back still has to pass the tree's gate.</p>
+  <p class="lede">Normally a LOT tree runs its sessions only on its own host (or in its own Slurm job). Git workers hand some obligations to <strong>another machine</strong>, and the two sides cannot reach each other over the network: all they share is one git repository, and each work order is a branch in it (not a GitHub issue or PR). The tree stays the master and decides what goes out; a proof that comes back still has to pass the tree's gate.</p>
 </header>
 
 <section id="diff">
@@ -196,8 +202,33 @@ pre code{font-size:inherit}
 
 <section id="collab">
   <div class="eyebrow">2 · How the collaboration is set up</div>
-  <h2>One git repository is the only channel</h2>
+  <h2>A work order is a git branch. No GitHub issues, no pull requests.</h2>
   <p>The master (whoever runs the tree) and the collaborator (whoever runs a worker) share nothing but one git repository, here a private GitHub repo. No SSH, no VPN, no shared disk, no open port on either machine. The collaborator only needs push access to that repo: the master invites them as a GitHub collaborator.</p>
+
+  <div class="answer panel">
+    <div class="qa"><div class="q">What holds the work orders?</div><div>Branches in one git repository. <strong>One order = one branch</strong>, <code>lot-orders/&lt;tree&gt;/&lt;obligation&gt;-&lt;n&gt;</code>. The branch's files are the ticket: the Lean module to prove, the lib it builds on, and <code>.lot-order/ORDER.json</code> with the frozen statement and the rules.</div></div>
+    <div class="qa"><div class="q">Are GitHub Issues or PRs used?</div><div><strong>No.</strong> No issues, pull requests, comments, labels, Actions or GitHub API calls. Both sides only run <code>git ls-remote</code>, <code>git fetch</code> and <code>git push</code>. GitHub is just where the repository lives; any git server both sides can push to would do. (<code>gh</code> is used only to log in and to download the setup kit.)</div></div>
+    <div class="qa"><div class="q">Then what is <code>ISSUE.md</code>?</div><div>A file inside the order branch: the obligation's task written out in words for the worker's agent. It is not a GitHub issue.</div></div>
+    <div class="qa"><div class="q">How is "taking a ticket" exclusive?</div><div>The worker takes an order by creating the branch <code>lot-claims/…/&lt;order&gt;</code> with a push that succeeds only if the branch does not exist yet. Two workers racing for one order: one push wins, the other is rejected and moves on.</div></div>
+  </div>
+
+  <h3>The whole exchange in git commands</h3>
+  <div class="tbl panel">
+  <table>
+    <thead><tr><th>Step</th><th>Who</th><th>What actually runs</th></tr></thead>
+    <tbody>
+      <tr><td>Put out an order</td><td><span class="t">master</span></td><td class="mono">git push --force-with-lease=lot-orders/T/o001-1: REPO &lt;commit&gt;:lot-orders/T/o001-1</td></tr>
+      <tr><td>Look for orders</td><td><span class="w">worker</span></td><td class="mono">git ls-remote REPO 'refs/heads/lot-orders/*'  <span class="cm"># every --poll seconds</span></td></tr>
+      <tr><td>Take one</td><td><span class="w">worker</span></td><td class="mono">git push --force-with-lease=lot-claims/T/o001-1: REPO &lt;commit&gt;:lot-claims/T/o001-1  <span class="cm"># create-only</span></td></tr>
+      <tr><td>Read the ticket</td><td><span class="w">worker</span></td><td class="mono">git fetch REPO lot-orders/T/o001-1  <span class="cm"># then check out, read ORDER.json + ISSUE.md</span></td></tr>
+      <tr><td>Heartbeat</td><td><span class="w">worker</span></td><td class="mono">git push REPO &lt;heartbeat commit&gt;:lot-claims/T/o001-1  <span class="cm"># every --heartbeat seconds</span></td></tr>
+      <tr><td>Hand in the proof</td><td><span class="w">worker</span></td><td class="mono">git push --force-with-lease=lot-results/T/o001-1: REPO &lt;commit&gt;:lot-results/T/o001-1</td></tr>
+      <tr><td>Follow claims and results</td><td><span class="t">master</span></td><td class="mono">git ls-remote REPO 'refs/heads/lot-claims/*' 'refs/heads/lot-results/*';  git fetch REPO &lt;sha&gt;</td></tr>
+      <tr><td>Close the ticket</td><td><span class="t">master</span></td><td class="mono">git push REPO :lot-orders/T/o001-1 :lot-claims/T/o001-1 :lot-results/T/o001-1  <span class="cm"># delete</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note"><code>T</code> is the tree's name (<code>putnam-1970-b6-pair</code>), <code>REPO</code> the orders repository. The proof the worker pushes is then checked by the tree's own gate before it is accepted.</p>
 
   <div class="roles">
     <div class="panel role">
