@@ -376,23 +376,17 @@ python3 -I lean_option_tree/docker/git-worker.py \
 </section>
 
 <section id="slots">
-  <div class="eyebrow">5 · What if the worker had 2 slots</div>
+  <div class="eyebrow">5 · A worker with 2 slots</div>
   <h2>putnam_1970_b6 again, with a worker that holds 2 orders at once</h2>
-  <p>Here a <strong>slot</strong> is one order the worker holds. In the real run the worker held one order at a time, so while it was on o001 every other order went <code>untaken</code>. Within an order, the worker still runs its own race and split (prove lane, split, sub-lemmas) no matter how many slots it has. Today <code>git-worker.py</code> takes one order per process, so 2 slots means two worker processes with different <code>--id</code> on the same machine.</p>
+  <p>Here a <strong>slot</strong> is one order the worker holds. Within an order, the worker still runs its own race and split (prove lane, split, sub-lemmas) no matter how many slots it has. Today <code>git-worker.py</code> takes one order per process, so 2 slots means two worker processes with different <code>--id</code> on the same machine.</p>
   <div class="facts">
-    <div><strong>3h29m → ≈2h23m</strong>time to the proved root</div>
-    <div><strong>17 → 8</strong>obligations the tree ever had to create</div>
-    <div><strong>o002</strong>is now the worker's: the tree never splits it, so its 9-obligation subtree never exists</div>
+    <div><strong>≈2h23m</strong>to the proved root</div>
+    <div><strong>8</strong>obligations in the tree</div>
+    <div><strong>2</strong>orders proved by the worker (o001, o002)</div>
   </div>
-  <p class="note">How the what-if is built: the tree's own timings are the real paired run (same splits, same orders out, same proofs of o003, o004, o005). The only change is that at 15:24 the worker takes o002-1 in its second slot. Its worker time, 98 minutes, is the real time our worker took to prove o002 (bretschneider) on 2026-11-04 with the same settings. The gate re-check (about 2 min) and the final review (about 5 min) take as long as in the real run. Everything else is what the hold rules then force.</p>
+  <p class="note">Timings: the tree's sessions as on 2026-11-05; o002's worker time (98 min) as our worker proved o002 on 2026-11-04 with the same settings.</p>
 
   <div class="panel chart">
-    <div class="ctrl">
-      <div class="seg" role="group" aria-label="Worker slots">
-        <button type="button" data-k="w2" aria-pressed="true">2 slots (what-if)</button>
-        <button type="button" data-k="w1" aria-pressed="false">1 slot (real run)</button>
-      </div>
-    </div>
     <div class="ctrl">
       <button id="wplay" type="button">▶ Play</button>
       <input id="wslider" type="range" min="0" max="208.8" step="0.1" value="208.8" aria-label="Time in the run">
@@ -629,7 +623,7 @@ setT(END);
 $("otable").innerHTML=O.map(([id,iss,cl,sub,end,how,note])=>`<tr><td class="mono">${id}</td><td class="mono">${clock(iss)}</td><td class="mono">${cl!=null?clock(cl):"—"}</td><td class="mono">${clock(end)}</td><td>${HOW[how]}</td><td>${esc(note)}</td></tr>`).join("");
 
 
-/* section 5: the same replay with a worker that holds 2 orders at once (what-if) */
+/* section 5: the same replay with a worker that holds 2 orders at once */
 (function(){
 const N2=[
 ["root",null,0,"putnam_1970_b6",0,138.2,"tree",27.7],
@@ -662,10 +656,9 @@ const EV2=[
 [127.9,"worker","Slot 2: o002 lands after 98 min of worker time (the worker's own race and split, as on 11-04)."],
 [136.2,"tree","The tree proves o004 outright: o009, o010 superseded; slot 1's o009 is withdrawn."],
 [138.2,"tree","o003 proved through its split. o001, o002 and o003 are all proved, so root is proved through s001."],
-[143.1,"tree","Final review done: proved in about 2h23m, against 3h29m in the real run."]];
+[143.1,"tree","Final review done: proved in about 2h23m."]];
 const SL2=[[1,"o001-1",28.2,92.5,94.4,"landed"],[1,"o009-1",116.1,136.2,136.2,"withdrawn"],[2,"o002-1",28.2,126.0,127.9,"landed"]];
-const SL1=O.filter(o=>o[2]!=null).map(o=>[1,o[0],o[2],o[3]??o[4],o[4],o[5]]);
-const SC={w2:{N:N2,O:O2,EV:EV2,SL:SL2,slots:2,end:143.1},w1:{N:N,O:O,EV:EV,SL:SL1,slots:1,end:END}};
+const SC={w2:{N:N2,O:O2,EV:EV2,SL:SL2,slots:2,end:143.1}};
 let K="w2",T=END,raf=null,last=0,ctx=null;
 const g=id=>document.getElementById(id);
 const svg=g("wsvg");
@@ -750,10 +743,7 @@ function tick(ts){if(last)setT(T+(ts-last)/1000*(END/45));last=ts;if(T>=END){sto
 g("wplay").onclick=()=>{if(raf){stop();return}if(T>=END)setT(0);last=0;g("wplay").textContent="❚❚ Pause";raf=requestAnimationFrame(tick)};
 g("wslider").addEventListener("input",e=>{stop();setT(+e.target.value)});
 g("wlog").addEventListener("click",e=>{const b=e.target.closest("button");if(b){stop();setT(ctx.sc.EV[+b.dataset.i][0]+0.05)}});
-document.querySelectorAll("#slots .seg button").forEach(b=>b.addEventListener("click",()=>{
-  stop();K=b.dataset.k;
-  document.querySelectorAll("#slots .seg button").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.k===K)));
-  build();setT(END)}));
+
 build();setT(END);
 })();
 </script>
