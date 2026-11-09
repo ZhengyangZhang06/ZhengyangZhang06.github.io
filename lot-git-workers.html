@@ -376,41 +376,38 @@ python3 -I lean_option_tree/docker/git-worker.py \
 </section>
 
 <section id="slots">
-  <div class="eyebrow">5 · Inside one worker</div>
-  <h2>A worker with 2 slots takes a putnam_1970_b6 order</h2>
-  <p>A <strong>slot</strong> is one agent session running at a time (<code>--parallel</code>). A worker takes one order at a time, and all of that order's sessions share its slots. With <code>--split-depth 1 --race</code> (the setting used for putnam_1970_b6) it attacks the order two ways at once:</p>
-  <ul class="rules">
-    <li><strong>Prove lane</strong>: one session tries the theorem outright, in a checkout of its own, for as long as the order allows. It holds a slot the whole time.</li>
-    <li><strong>Split</strong>: one session writes <code>.lot-order/SPLIT.json</code> (2–4 sub-lemmas) and proves the theorem <em>from</em> them; the split check refuses any <code>sorry</code> outside the sub-lemma files. Then each sub-lemma gets its own git worktree and a session, as slots allow, each checked by the trusted checker on its own.</li>
-    <li>Whichever way passes the trusted check first wins and the other is stopped at once. Proved sub-lemmas are merged back and the theorem is checked again. Then the worker pushes <code>lot-results</code>. The tree sees none of this, only heartbeats and then the result.</li>
-  </ul>
-  <p class="note">The timings are the real sessions of our own worker on 2026-11-04 (DeepSeek v4.1 flash, <code>--parallel 4</code>), on orders o001-1 (Pitot's theorem) and o002-1 (Bretschneider's formula). The 2-slot view schedules the same sessions with the same lengths into 2 slots; sub-lemmas take the free slot in the order SPLIT.json lists them.</p>
+  <div class="eyebrow">5 · What if the worker had 2 slots</div>
+  <h2>putnam_1970_b6 again, with a worker that holds 2 orders at once</h2>
+  <p>Here a <strong>slot</strong> is one order the worker holds. In the real run the worker held one order at a time, so while it was on o001 every other order went <code>untaken</code>. Within an order, the worker still runs its own race and split (prove lane, split, sub-lemmas) no matter how many slots it has. Today <code>git-worker.py</code> takes one order per process, so 2 slots means two worker processes with different <code>--id</code> on the same machine.</p>
+  <div class="facts">
+    <div><strong>3h29m → ≈2h23m</strong>time to the proved root</div>
+    <div><strong>17 → 8</strong>obligations the tree ever had to create</div>
+    <div><strong>o002</strong>is now the worker's: the tree never splits it, so its 9-obligation subtree never exists</div>
+  </div>
+  <p class="note">How the what-if is built: the tree's own timings are the real paired run (same splits, same orders out, same proofs of o003, o004, o005). The only change is that at 15:24 the worker takes o002-1 in its second slot. Its worker time, 98 minutes, is the real time our worker took to prove o002 (bretschneider) on 2026-11-04 with the same settings. The gate re-check (about 2 min) and the final review (about 5 min) take as long as in the real run. Everything else is what the hold rules then force.</p>
 
   <div class="panel chart">
     <div class="ctrl">
-      <div class="seg" role="group" aria-label="Order">
-        <button type="button" data-o="o002" aria-pressed="true">o002-1 · Bretschneider</button>
-        <button type="button" data-o="o001" aria-pressed="false">o001-1 · Pitot</button>
-      </div>
-      <div class="seg" role="group" aria-label="Slots">
-        <button type="button" data-s="2" aria-pressed="true">2 slots</button>
-        <button type="button" data-s="4" aria-pressed="false">4 slots (real run)</button>
+      <div class="seg" role="group" aria-label="Worker slots">
+        <button type="button" data-k="w2" aria-pressed="true">2 slots (what-if)</button>
+        <button type="button" data-k="w1" aria-pressed="false">1 slot (real run)</button>
       </div>
     </div>
     <div class="ctrl">
       <button id="wplay" type="button">▶ Play</button>
-      <input id="wslider" type="range" min="0" max="100" step="0.1" value="100" aria-label="Minutes since the order was taken">
+      <input id="wslider" type="range" min="0" max="208.8" step="0.1" value="208.8" aria-label="Time in the run">
       <span id="wclock" class="mono"></span>
     </div>
     <div id="wcap" class="tcap"></div>
-    <div id="wnote" class="note"></div>
-    <div class="scroll"><svg id="wsvg" role="img" aria-label="The worker's own proof tree and its slots over time"></svg></div>
+    <div class="scroll"><svg id="wsvg" role="img" aria-label="Proof tree, per-obligation timeline and the worker's slots"></svg></div>
     <div class="legend">
-      <span><i style="background:var(--worker)"></i>prove lane session</span>
-      <span><i style="background:var(--warn)"></i>split session</span>
-      <span><i style="background:var(--tree)"></i>sub-lemma session</span>
-      <span><i class="ring" style="border-color:var(--muted);border-style:dotted;border-radius:2px;width:18px;height:9px"></i>waiting for a free slot</span>
-      <span>✓ check passed · × stopped</span>
+      <span><i class="ring" style="border-color:var(--tree)"></i>tree working on it</span>
+      <span><i class="ring" style="border-color:var(--tree);border-style:dashed"></i>split, waiting on children</span>
+      <span><i style="background:var(--wait)"></i>order out (5-min window)</span>
+      <span><i style="background:var(--worker)"></i>worker has it</span>
+      <span><i class="dot" style="background:var(--tree)"></i>proved by the tree</span>
+      <span><i class="dot" style="background:var(--worker)"></i>proved by the worker</span>
+      <span><i class="ring" style="border-color:var(--muted);border-style:dotted"></i>superseded</span>
     </div>
     <ol class="evlog" id="wlog"></ol>
   </div>
@@ -632,150 +629,132 @@ setT(END);
 $("otable").innerHTML=O.map(([id,iss,cl,sub,end,how,note])=>`<tr><td class="mono">${id}</td><td class="mono">${clock(iss)}</td><td class="mono">${cl!=null?clock(cl):"—"}</td><td class="mono">${clock(end)}</td><td>${HOW[how]}</td><td>${esc(note)}</td></tr>`).join("");
 
 
-/* inside one worker: real sessions of 2026-11-04 (minutes after the order was taken) */
+/* section 5: the same replay with a worker that holds 2 orders at once (what-if) */
 (function(){
-const SUBS={o001:["tangent_lengths_from_point","tangent_point_perp_of_unique","tangency_point_mem_segment","pitot_sum_of_tangent_points"],
-            o002:["convex_setup","triangle_area","quad_split","bretschneider_trig"]};
-const THM={o001:"pitot",o002:"bretschneider"};
-/* sessions: [node, kind, slot, created, start, end, how]; start null = never got a slot */
-const SC={
- "o002-4":{end:97.8,won:"split",push:97.8,ses:[
-  ["lane","lane",1,0,0,97.8,"stopped"],["split","split",2,0,0,19.0,"proved"],
-  ["s0","sub",2,19.2,19.2,94.9,"proved"],["s1","sub",3,19.2,19.2,51.4,"proved"],["s2","sub",4,19.2,19.2,49.0,"proved"],["s3","sub",4,19.2,49.2,55.4,"proved"]],
-  ev:[[0,"Takes o002-1 (bretschneider) and races: the prove lane gets slot 1, the split session slot 2."],
-      [19.0,"The split session writes SPLIT.json with 4 sub-lemmas and proves bretschneider from them; the split check passes."],
-      [19.2,"Each sub-lemma gets its own worktree. Three get slots 2, 3, 4; bretschneider_trig waits."],
-      [49.0,"quad_split proved; its slot goes to bretschneider_trig."],
-      [51.4,"triangle_area proved."],[55.4,"bretschneider_trig proved."],
-      [94.9,"convex_setup proved, after 76 minutes: the slowest piece."],
-      [97.8,"All four merged back; the trusted check of the theorem passes. The split wins, the prove lane is stopped, and the worker pushes lot-results (proved)."]],
-  note:"Real run, 4 slots: proved in 98 minutes."},
- "o002-2":{end:166.0,won:"split",push:166.0,ses:[
-  ["lane","lane",1,0,0,166.0,"stopped"],["split","split",2,0,0,19.0,"proved"],
-  ["s0","sub",2,19.2,19.2,94.9,"proved"],["s1","sub",2,19.2,94.9,127.1,"proved"],["s2","sub",2,19.2,127.1,156.9,"proved"],["s3","sub",2,19.2,156.9,163.1,"proved"]],
-  ev:[[0,"Takes o002-1 (bretschneider) and races: the prove lane gets slot 1, the split session slot 2."],
-      [19.0,"The split session writes SPLIT.json with 4 sub-lemmas and proves bretschneider from them; the split check passes."],
-      [19.2,"Each sub-lemma gets its own worktree, but only slot 2 is free: convex_setup starts, the other three wait."],
-      [94.9,"convex_setup proved (76 min); slot 2 goes to triangle_area."],
-      [127.1,"triangle_area proved; slot 2 goes to quad_split."],
-      [156.9,"quad_split proved; slot 2 goes to bretschneider_trig."],
-      [163.1,"bretschneider_trig proved."],
-      [166.0,"All four merged back; the theorem's check passes. The split wins, the prove lane is stopped, and the worker pushes lot-results (proved)."]],
-  note:"2 slots: the same sessions one after another on slot 2, about 166 minutes instead of 98. This assumes the prove lane still has not finished by then; in the real run it had not proved it by minute 98, and we do not know about later."},
- "o001-4":{end:87.4,won:"prove",push:87.5,ses:[
-  ["lane","lane",1,0,0,85.5,"proved"],["split","split",2,0,0,25.1,"proved"],
-  ["s0","sub",2,25.2,25.2,34.7,"proved"],["s1","sub",3,25.2,25.2,47.4,"proved"],["s2","sub",4,25.2,25.2,85.5,"stopped"],["s3","sub",2,25.2,34.8,40.1,"proved"]],
-  ev:[[0,"Takes o001-1 (pitot) and races: the prove lane gets slot 1, the split session slot 2."],
-      [25.1,"The split session writes SPLIT.json with 4 sub-lemmas and proves pitot from them; the split check passes."],
-      [25.2,"Three sub-lemmas get slots 2, 3, 4; pitot_sum_of_tangent_points waits."],
-      [34.7,"tangent_lengths_from_point proved; its slot goes to pitot_sum_of_tangent_points."],
-      [40.1,"pitot_sum_of_tangent_points proved."],[47.4,"tangent_point_perp_of_unique proved."],
-      [85.5,"The prove lane proves pitot outright: the prove side wins. tangency_point_mem_segment (60 min, not done) is stopped."],
-      [87.4,"The lane's files go back into the order's checkout; the trusted check passes. The worker pushes lot-results (proved)."]],
-  note:"Real run, 4 slots: proved in 87 minutes, by the prove lane."},
- "o001-2":{end:87.4,won:"prove",push:87.5,ses:[
-  ["lane","lane",1,0,0,85.5,"proved"],["split","split",2,0,0,25.1,"proved"],
-  ["s0","sub",2,25.2,25.2,34.7,"proved"],["s1","sub",2,25.2,34.7,56.9,"proved"],["s2","sub",2,25.2,56.9,85.5,"stopped"],["s3","sub",2,25.2,null,85.5,"stopped"]],
-  ev:[[0,"Takes o001-1 (pitot) and races: the prove lane gets slot 1, the split session slot 2."],
-      [25.1,"The split session writes SPLIT.json with 4 sub-lemmas and proves pitot from them; the split check passes."],
-      [25.2,"Only slot 2 is free: tangent_lengths_from_point starts, the other three wait."],
-      [34.7,"tangent_lengths_from_point proved; slot 2 goes to tangent_point_perp_of_unique."],
-      [56.9,"tangent_point_perp_of_unique proved; slot 2 goes to tangency_point_mem_segment."],
-      [85.5,"The prove lane proves pitot outright: the prove side wins. The split side is stopped; pitot_sum_of_tangent_points never got a slot."],
-      [87.4,"The lane's files go back into the order's checkout; the trusted check passes. The worker pushes lot-results (proved)."]],
-  note:"2 slots: the same finish time, 87 minutes. The prove lane has a slot of its own either way, and it won before the split side could finish."}};
-let O_="o002",S_="2",T=0,raf=null,last=0;
-const W=1000,LX=330,RX=984,RH=26,TOP=34;
-const svg=document.getElementById("wsvg");
+const N2=[
+["root",null,0,"putnam_1970_b6",0,138.2,"tree",27.7],
+["o001","root",1,"pitot",27.7,94.4,"worker",null],
+["o002","root",1,"bretschneider",27.7,127.9,"worker",null],
+["o003","root",1,"cospherical_of_angle_sum",27.7,138.2,"tree",73.9],
+["o004","o003",2,"convex_position",73.9,136.2,"tree",115.6],
+["o009","o004",3,"wSameSide_of_segment_interior_disjoint",115.6,136.2,"super",null],
+["o010","o004",3,"sOppSide_of_wSameSide_of_wSameSide",115.6,136.2,"super",null],
+["o005","o003",2,"cospherical_of_angle_sum_of_opposite_sides",73.9,93.0,"tree",null]];
+const O2=[
+["o001-1",27.7,28.2,92.5,94.4,"landed",""],
+["o002-1",27.7,28.2,126.0,127.9,"landed",""],
+["o003-1",27.7,null,null,32.7,"untaken",""],
+["o004-2",74.4,null,null,79.4,"untaken",""],
+["o005-2",74.4,null,null,79.4,"untaken",""],
+["o009-1",115.6,116.1,null,136.2,"withdrawn",""],
+["o010-1",115.6,null,null,120.6,"untaken",""]];
+const EV2=[
+[0.0,"tree","The tree starts on root: its own PROVE and DEC sessions."],
+[27.7,"tree","Root is split into o001–o003; three orders go out and the tree pauses its sessions on them."],
+[28.2,"worker","The worker takes o001-1 in slot 1 and o002-1 in slot 2. Both slots are now busy."],
+[32.7,"tree","o003 untaken: the tree's for good. The tree keeps its PROVE and DEC off o002, so it never splits it."],
+[73.9,"tree","o003 is split into o004, o005; both go out, but both worker slots are busy."],
+[79.4,"tree","o004, o005 untaken."],
+[93.0,"tree","The tree proves o005."],
+[94.4,"worker","Slot 1: o001 lands. Slot 1 is free."],
+[115.6,"tree","o004 is split into o009, o010; both go out. Slot 1 takes o009; slot 2 is still on o002."],
+[120.6,"tree","o010 untaken."],
+[127.9,"worker","Slot 2: o002 lands after 98 min of worker time (the worker's own race and split, as on 11-04)."],
+[136.2,"tree","The tree proves o004 outright: o009, o010 superseded; slot 1's o009 is withdrawn."],
+[138.2,"tree","o003 proved through its split. o001, o002 and o003 are all proved, so root is proved through s001."],
+[143.1,"tree","Final review done: proved in about 2h23m, against 3h29m in the real run."]];
+const SL2=[[1,"o001-1",28.2,92.5,94.4,"landed"],[1,"o009-1",116.1,136.2,136.2,"withdrawn"],[2,"o002-1",28.2,126.0,127.9,"landed"]];
+const SL1=O.filter(o=>o[2]!=null).map(o=>[1,o[0],o[2],o[3]??o[4],o[4],o[5]]);
+const SC={w2:{N:N2,O:O2,EV:EV2,SL:SL2,slots:2,end:143.1},w1:{N:N,O:O,EV:EV,SL:SL1,slots:1,end:END}};
+let K="w2",T=END,raf=null,last=0,ctx=null;
 const g=id=>document.getElementById(id);
-const mm=m=>`+${Math.floor(m/60)}:${String(Math.floor(m%60)).padStart(2,"0")}`;
-function rows(){const s=SUBS[O_];return [
- ["thm",0,`${O_}  ${THM[O_]}`,"the order's theorem"],
- ["lane",1,`${O_}~prove`,"prove lane"],
- ["split",1,"split","SPLIT.json + glue"],
- ...s.map((n,i)=>["s"+i,2,n,""])]}
-function stOf(sc,id,t){
-  if(id==="thm"){if(t>=sc.end)return["✓ proved, "+(sc.won==="split"?"split won":"prove lane won"),"var(--ok)"];return["racing","var(--ink2)"]}
-  const s=sc.ses.find(x=>x[0]===id);const [,kind,slot,cr,st,en,how]=s;
-  if(t<cr)return null;
-  if(st==null||t<st){if(t>=en)return["stopped, never ran","var(--muted)"];return["waiting for a slot","var(--muted)"]}
-  if(t<en)return[`running · slot ${slot}`,kind==="lane"?"var(--worker)":kind==="split"?"var(--warn)":"var(--tree)"];
-  return how==="proved"?["✓ check passed","var(--ok)"]:["× stopped","var(--muted)"];
+const svg=g("wsvg");
+const W=1000,TW=400,X0=420,X1=984,RH=26,TOP=36;
+const xt=m=>X0+m/END*(X1-X0);
+const LBL={tree:"tree working",split:"split",out:"order out",worker:"worker has it",gate:"gate re-check",pt:"✓ by tree",pw:"✓ by worker",super:"superseded"};
+const LCOL={tree:"var(--tree)",split:"var(--tree)",out:"var(--muted)",worker:"var(--worker)",gate:"var(--tree)",pt:"var(--tree)",pw:"var(--worker)",super:"var(--muted)"};
+function stateAt(sc,n,t){
+  const [id,,,,app,done,how,split]=n;
+  if(t<app)return null;
+  if(t>=done)return how==="super"?"super":how==="worker"?"pw":"pt";
+  const o=sc.ord[id];
+  if(o){const [,iss,cl,sub,end]=o;
+    if(t>=iss&&t<(cl??end))return "out";
+    if(cl!=null&&t>=cl&&t<end)return sub!=null&&t>=sub?"gate":"worker";}
+  return split!=null&&t>=split?"split":"tree";
 }
-const KC={lane:"var(--worker)",split:"var(--warn)",sub:"var(--tree)"};
 function build(){
-  const sc=SC[O_+"-"+S_];const R=rows();const N=+S_;
-  const END=Math.max(sc.end+6,100);
-  const x=m=>LX+m/END*(RX-LX);
-  const yR=i=>TOP+i*RH+RH/2;
-  const slotTop=TOP+R.length*RH+30;
-  const yS=k=>slotTop+(k-1)*RH+RH/2;
-  const H=slotTop+N*RH+30;
+  const sc=SC[K];sc.ord={};sc.O.forEach(o=>{sc.ord[o[0].split("-")[0]]=o});
+  const row={};sc.N.forEach((n,i)=>row[n[0]]=i);
+  const ny=i=>TOP+i*RH+RH/2, nx=d=>18+d*24;
+  const sTop=TOP+sc.N.length*RH+30, sy=k=>sTop+(k-1)*RH+RH/2;
+  const H=sTop+sc.slots*RH+30;
   svg.setAttribute("viewBox",`0 0 ${W} ${H}`);Object.assign(svg.style,{display:"block",width:"100%",height:"auto",minWidth:"760px"});
-  let s=`<text x="8" y="16" font-size="11" fill="var(--muted)" font-weight="500">THE WORKER'S OWN TREE</text><text x="${LX}" y="16" font-size="11" fill="var(--muted)" font-weight="500">MINUTES SINCE THE ORDER WAS TAKEN</text>`;
-  s+=`<text x="8" y="${slotTop-10}" font-size="11" fill="var(--muted)" font-weight="500">SLOTS (--parallel ${N})</text>`;
-  for(let m=0;m<=END;m+=30)s+=`<line x1="${x(m)}" x2="${x(m)}" y1="${TOP-6}" y2="${H-22}" stroke="var(--line)"/><text x="${x(m)}" y="${H-6}" font-size="11" fill="var(--muted)" text-anchor="middle">${mm(m)}</text>`;
-  R.forEach((r,i)=>{if(i%2)s+=`<rect x="0" y="${TOP+i*RH}" width="${W}" height="${RH}" fill="var(--git-soft)" opacity=".5"/>`});
-  for(let k=1;k<=N;k++)s+=`<rect x="0" y="${slotTop+(k-1)*RH}" width="${W}" height="${RH}" fill="var(--git-soft)" opacity="${k%2?.9:.5}"/><text x="${LX-12}" y="${yS(k)+4}" font-size="11.5" fill="var(--ink)" text-anchor="end">slot ${k}</text>`;
+  let s=`<text x="8" y="16" font-size="11" fill="var(--muted)" font-weight="500">PROOF TREE</text><text x="${X0}" y="16" font-size="11" fill="var(--muted)" font-weight="500">TIMELINE (UTC)</text>`;
+  s+=`<text x="8" y="${sTop-10}" font-size="11" fill="var(--muted)" font-weight="500">WORKER SLOTS (one order each)</text>`;
+  s+=`<line x1="${TW+8}" x2="${TW+8}" y1="6" y2="${H-6}" stroke="var(--line)"/>`;
+  for(const c of [3.4,63.4,123.4,183.4])s+=`<line x1="${xt(c)}" x2="${xt(c)}" y1="${TOP-8}" y2="${H-24}" stroke="var(--line)"/><text x="${xt(c)}" y="${H-8}" font-size="11" fill="var(--muted)" text-anchor="middle">${clock(c)}</text>`;
+  s+=`<line x1="${xt(sc.end)}" x2="${xt(sc.end)}" y1="${TOP-8}" y2="${H-24}" stroke="var(--ok)" stroke-dasharray="3 3"/><text x="${xt(sc.end)-4}" y="${TOP-12}" font-size="11" fill="var(--ok)" text-anchor="end">proved ${clock(sc.end)}</text>`;
+  sc.N.forEach((n,i)=>{if(i%2)s+=`<rect x="0" y="${TOP+i*RH}" width="${W}" height="${RH}" fill="var(--git-soft)" opacity=".5"/>`});
+  for(let k=1;k<=sc.slots;k++)s+=`<rect x="0" y="${sTop+(k-1)*RH}" width="${W}" height="${RH}" fill="var(--git-soft)" opacity="${k%2?.9:.5}"/><text x="${TW-2}" y="${sy(k)+4}" font-size="11.5" fill="var(--ink)" text-anchor="end">slot ${k}</text>`;
   let m="";
-  m+=`<line x1="${x(0)}" x2="${x(sc.end)}" y1="${yR(0)}" y2="${yR(0)}" stroke="var(--ink2)" stroke-dasharray="4 3"/><circle cx="${x(sc.end)}" cy="${yR(0)}" r="5" fill="var(--ok)" stroke="var(--panel)" stroke-width="2"/><text x="${x(sc.end)+8}" y="${yR(0)+4}" font-size="11" fill="var(--ok)">push</text>`;
-  sc.ses.forEach(([id,kind,slot,cr,st,en,how])=>{
-    const i=R.findIndex(r=>r[0]===id),y=yR(i);
-    const ws=cr,we=st??en;
-    if(we>ws+0.05)m+=`<rect x="${x(ws)}" y="${y-4.5}" width="${x(we)-x(ws)}" height="9" rx="2" fill="none" stroke="var(--muted)" stroke-dasharray="2 2"/>`;
-    if(st!=null){
-      m+=`<rect x="${x(st)}" y="${y-5}" width="${Math.max(2,x(en)-x(st))}" height="10" rx="2" fill="${KC[kind]}"/>`;
-      m+=how==="proved"?`<text x="${x(en)+4}" y="${y+4}" font-size="11" fill="var(--ok)">✓</text>`:`<text x="${x(en)+4}" y="${y+4}" font-size="11" fill="var(--muted)">×</text>`;
-      const w=x(en)-x(st),lbl=id==="lane"?"prove lane":id==="split"?"split":R[i][2];
-      m+=`<rect x="${x(st)}" y="${yS(slot)-8}" width="${Math.max(2,w-1)}" height="16" rx="3" fill="${KC[kind]}"/>`;
-      const fit=Math.floor((w-8)/6.4);
-      if(fit>=4)m+=`<text x="${x(st)+5}" y="${yS(slot)+4}" font-size="10.5" fill="var(--panel)">${lbl.length>fit?lbl.slice(0,fit-1)+"…":lbl}</text>`;
-    }
+  sc.N.forEach((n,i)=>{const [id,,,,app,done,how]=n;const y=ny(i);const o=sc.ord[id];
+    const spans=o?[[app,o[1]],[o[4],done]]:[[app,done]];
+    for(const [a,b] of spans)if(b>a)m+=`<rect x="${xt(a)}" y="${y-2}" width="${xt(b)-xt(a)}" height="4" rx="2" fill="var(--tree)" opacity=".55"/>`;
+    if(o){const [,iss,cl,sub,end]=o;
+      m+=`<rect x="${xt(iss)}" y="${y-5}" width="${Math.max(2,xt(cl??end)-xt(iss))}" height="10" rx="2" fill="var(--wait)"/>`;
+      if(cl!=null){m+=`<rect x="${xt(cl)+1}" y="${y-5}" width="${Math.max(2,xt(sub??end)-xt(cl)-1)}" height="10" rx="2" fill="var(--worker)"/>`;
+        if(sub!=null)m+=`<rect x="${xt(sub)+2}" y="${y-5}" width="${Math.max(3,xt(end)-xt(sub)-2)}" height="10" rx="2" fill="var(--tree)"/>`;}}
+    m+=how==="super"?`<text x="${xt(done)}" y="${y+4}" font-size="11" fill="var(--muted)" text-anchor="middle">×</text>`
+      :`<circle cx="${xt(done)}" cy="${y}" r="4.5" fill="${how==="worker"?"var(--worker)":"var(--tree)"}" stroke="var(--panel)" stroke-width="2"/>`;
   });
-  s+=`<defs><clipPath id="wpast"><rect id="wpastr" x="0" y="0" width="${LX}" height="${H}"/></clipPath></defs>`;
+  sc.SL.forEach(([k,id,a,b,e,how])=>{const y=sy(k),w=xt(b)-xt(a);
+    m+=`<rect x="${xt(a)}" y="${y-8}" width="${Math.max(2,w)}" height="16" rx="3" fill="var(--worker)"/>`;
+    if(w>40)m+=`<text x="${xt(a)+5}" y="${y+4}" font-size="10.5" fill="var(--panel)">${id}</text>`;
+    m+=`<text x="${xt(b)+4}" y="${y+4}" font-size="11" fill="${how==="landed"?"var(--ok)":"var(--muted)"}">${how==="landed"?"✓":"×"}</text>`;});
+  s+=`<defs><clipPath id="wpast"><rect id="wpastr" x="0" y="0" width="${X0}" height="${H}"/></clipPath></defs>`;
   s+=`<g opacity=".16">${m}</g><g clip-path="url(#wpast)">${m}</g><g id="wtree"></g>`;
-  s+=`<line id="wph" y1="${TOP-8}" y2="${H-22}" stroke="var(--ink)" stroke-width="1.5"/>`;
+  s+=`<line id="wph" y1="${TOP-10}" y2="${H-24}" stroke="var(--ink)" stroke-width="1.5"/>`;
   svg.innerHTML=s;
-  build.ctx={sc,R,END,x,yR};
-  g("wslider").max=END;
-  g("wnote").textContent=sc.note;
-  g("wlog").innerHTML=sc.ev.map(([t,txt],i)=>`<li><button type="button" data-i="${i}"><span class="mono">${mm(t)}</span><span class="w">worker</span><span>${txt}</span></button></li>`).join("");
+  ctx={sc,row,ny,nx,sy};
+  g("wlog").innerHTML=sc.EV.map(([t,side,txt],i)=>`<li><button type="button" data-i="${i}"><span class="mono">${clock(t)}</span><span class="${side==="worker"?"w":"t"}">${side}</span><span>${txt}</span></button></li>`).join("");
 }
 function drawTree(t){
-  const {sc,R,yR}=build.ctx;let s="";
-  const nx=d=>18+d*22;
-  R.forEach((r,i)=>{const [id,d,name,sub]=r;if(d===0)return;const st=stOf(sc,id,t);if(!st)return;
-    const p=d===1?0:2;s+=`<path d="M${nx(d-1)} ${yR(p)+7} V${yR(i)} H${nx(d)-7}" fill="none" stroke="var(--muted)" stroke-opacity=".6"/>`});
-  R.forEach((r,i)=>{const [id,d,name,sub]=r;const st=stOf(sc,id,t);const xx=nx(d),y=yR(i);
-    if(!st){s+=`<text x="${xx-4}" y="${y+4}" font-size="11.5" fill="var(--muted)" opacity=".35">${id[0]==="s"?"(sub-lemma)":name}</text>`;return}
-    const done=st[0].startsWith("✓");
-    s+=`<circle cx="${xx}" cy="${y}" r="6" fill="${done?st[1]:"var(--panel)"}" stroke="${st[1]}" stroke-width="2"${st[0].startsWith("waiting")?' stroke-dasharray="2 2"':""}/>`;
-    const max=Math.floor((LX-150-xx)/6.6);const nm=name.length>max?name.slice(0,max-1)+"…":name;
-    s+=`<text x="${xx+12}" y="${y+4}" font-size="11.5" fill="var(--ink)">${nm}${sub?` <tspan fill="var(--muted)">${sub}</tspan>`:""}</text>`;
-    s+=`<text x="${LX-12}" y="${y+4}" font-size="11" fill="${st[1]}" text-anchor="end" font-weight="500">${st[0]}</text>`;
-  });
+  const {sc,row,ny,nx,sy}=ctx;let s="";
+  sc.N.forEach((n,i)=>{const [id,par,d]=n;const st=stateAt(sc,n,t);if(!st||!par)return;
+    s+=`<path d="M${nx(d-1)} ${ny(row[par])+7} V${ny(i)} H${nx(d)-7}" fill="none" stroke="var(--muted)" stroke-opacity=".6"/>`;});
+  sc.N.forEach((n,i)=>{const [id,,d,name]=n;const st=stateAt(sc,n,t);const x=nx(d),y=ny(i);
+    if(!st){s+=`<text x="${x-4}" y="${y+4}" font-size="11.5" fill="var(--muted)" opacity=".35">${id}</text>`;return;}
+    const col=LCOL[st],filled=st==="pt"||st==="pw";
+    const dash=st==="split"?' stroke-dasharray="3 2"':st==="super"?' stroke-dasharray="1.5 2"':"";
+    s+=`<circle cx="${x}" cy="${y}" r="6" fill="${filled?col:st==="out"?"var(--wait)":"var(--panel)"}" stroke="${col}" stroke-width="2"${dash}/>`;
+    const lx=x+12,max=Math.floor((296-lx-36)/6.6);const nm=name.length>max?name.slice(0,max-1)+"…":name;
+    s+=`<text x="${lx}" y="${y+4}" font-size="11.5" fill="var(--ink)"${st==="super"?' text-decoration="line-through" opacity=".6"':""}>${id} <tspan fill="var(--muted)">${nm}</tspan></text>`;
+    s+=`<text x="${TW-2}" y="${y+4}" font-size="11" fill="${col}" text-anchor="end" font-weight="500">${LBL[st]}</text>`;});
+  for(let k=1;k<=sc.slots;k++){const cur=sc.SL.find(([kk,,a,,e])=>kk===k&&t>=a&&t<e);
+    s+=`<text x="12" y="${sy(k)+4}" font-size="11.5" fill="${cur?"var(--worker)":"var(--muted)"}">${cur?"holds "+cur[1]:"free"}</text>`;}
   g("wtree").innerHTML=s;
 }
 function setT(t){
-  const {sc,END,x}=build.ctx;T=Math.max(0,Math.min(END,t));
-  g("wslider").value=T;g("wpastr").setAttribute("width",x(T));
-  g("wph").setAttribute("x1",x(T));g("wph").setAttribute("x2",x(T));
-  g("wclock").textContent=`${mm(T)} since taken`;
+  T=Math.max(0,Math.min(END,t));const {sc}=ctx;
+  g("wslider").value=T;g("wpastr").setAttribute("width",xt(T));
+  g("wph").setAttribute("x1",xt(T));g("wph").setAttribute("x2",xt(T));
+  g("wclock").textContent=`${clock(T)} UTC · ${since(T)}`;
   drawTree(T);
-  let k=-1;sc.ev.forEach((e,i)=>{if(e[0]<=T+1e-9)k=i});
-  g("wcap").textContent=k>=0?`${mm(sc.ev[k][0])} · ${sc.ev[k][1]}`:"";
+  let k=-1;sc.EV.forEach((e,i)=>{if(e[0]<=T+1e-9)k=i});
+  g("wcap").textContent=k>=0?`${clock(sc.EV[k][0])} · ${sc.EV[k][2]}`:"";
   [...g("wlog").children].forEach((li,i)=>li.classList.toggle("cur",i===k));
 }
 function stop(){if(raf)cancelAnimationFrame(raf);raf=null;g("wplay").textContent="▶ Play"}
-function tick(ts){const {END}=build.ctx;if(last)setT(T+(ts-last)/1000*(END/30));last=ts;if(T>=END){stop();return}raf=requestAnimationFrame(tick)}
-g("wplay").onclick=()=>{if(raf){stop();return}if(T>=build.ctx.END)setT(0);last=0;g("wplay").textContent="❚❚ Pause";raf=requestAnimationFrame(tick)};
+function tick(ts){if(last)setT(T+(ts-last)/1000*(END/45));last=ts;if(T>=END){stop();return}raf=requestAnimationFrame(tick)}
+g("wplay").onclick=()=>{if(raf){stop();return}if(T>=END)setT(0);last=0;g("wplay").textContent="❚❚ Pause";raf=requestAnimationFrame(tick)};
 g("wslider").addEventListener("input",e=>{stop();setT(+e.target.value)});
-g("wlog").addEventListener("click",e=>{const b=e.target.closest("button");if(b){stop();setT(build.ctx.sc.ev[+b.dataset.i][0]+0.05)}});
+g("wlog").addEventListener("click",e=>{const b=e.target.closest("button");if(b){stop();setT(ctx.sc.EV[+b.dataset.i][0]+0.05)}});
 document.querySelectorAll("#slots .seg button").forEach(b=>b.addEventListener("click",()=>{
-  stop();if(b.dataset.o)O_=b.dataset.o;if(b.dataset.s)S_=b.dataset.s;
-  document.querySelectorAll("#slots .seg button").forEach(c=>c.setAttribute("aria-pressed",c.dataset.o?String(c.dataset.o===O_):String(c.dataset.s===S_)));
-  build();setT(build.ctx.END)}));
-build();setT(build.ctx.END);
+  stop();K=b.dataset.k;
+  document.querySelectorAll("#slots .seg button").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.k===K)));
+  build();setT(END)}));
+build();setT(END);
 })();
 </script>
 </body>
