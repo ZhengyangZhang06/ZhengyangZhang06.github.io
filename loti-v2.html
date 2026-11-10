@@ -10,18 +10,18 @@
 :root{
   --bg:#f6f7f9; --panel:#ffffff; --ink:#1b1f27; --ink2:#4a5160; --muted:#7b8292; --line:#dde1e8; --grid:#eceff3;
   --tree:#3d55c4; --tree-soft:#e8ecfb; --worker:#0d7f6f; --worker-soft:#e2f4f0; --git:#5b616e; --git-soft:#eef0f3;
-  --ok:#1f7a3a; --warn:#a2610c; --bad:#b3261e;
+  --ok:#1f7a3a; --ok-soft:#e3f3e7; --warn:#a2610c; --bad:#b3261e;
   --sans:"IBM Plex Sans",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d; --grid:#242a33;
   --tree:#8399f2; --tree-soft:#222a45; --worker:#43c2ad; --worker-soft:#16332e; --git:#a3a9b5; --git-soft:#252a32;
-  --ok:#5cc47a; --warn:#e0a24a; --bad:#f08a80; color-scheme:dark}}
+  --ok:#5cc47a; --ok-soft:#173022; --warn:#e0a24a; --bad:#f08a80; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d; --grid:#242a33;
   --tree:#8399f2; --tree-soft:#222a45; --worker:#43c2ad; --worker-soft:#16332e; --git:#a3a9b5; --git-soft:#252a32;
-  --ok:#5cc47a; --warn:#e0a24a; --bad:#f08a80; color-scheme:dark}
+  --ok:#5cc47a; --ok-soft:#173022; --warn:#e0a24a; --bad:#f08a80; color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font:15px/1.65 var(--sans)}
 .wrap{max-width:980px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:56px}
 h1{font-size:30px;line-height:1.25;margin:0;font-weight:600;text-wrap:balance}
@@ -121,6 +121,16 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
 .stbl td{border-bottom:1px solid var(--line);padding:3px 6px;vertical-align:top}
 .stbl td.m{font-family:var(--mono);font-size:11.5px;white-space:nowrap}
 .okc{color:var(--ok)}.badc{color:var(--bad)}
+
+.sn{border:1px solid var(--line);border-left-width:3px;border-radius:6px;background:var(--panel);padding:5px 8px;font-size:12.5px}
+.sn.improve{border-left-color:var(--worker)}.sn.arch{border-left-color:var(--tree)}.sn.aud{border-left-color:var(--warn)}
+.sn.landed{background:var(--ok-soft)}
+.sn.live{box-shadow:0 0 0 2px var(--tree)}
+.sn .l1{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.sn .tm{font:11.5px var(--mono);color:var(--muted)}
+.sn .idea{color:var(--ink2);margin-top:2px}
+.sn .subs{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:3px;font:11.5px var(--mono)}
+.ltree li.sl{margin:5px 0}
 </style>
 </head>
 <body>
@@ -176,7 +186,10 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
   <p>The same tree as a structure. Under the task are its <strong>variants</strong> (architectures) and the rejected
   proposals; under each variant its <strong>slots</strong>; on each slot the IMPROVE sessions that worked there, the idea
   each was given, and every submission with its gate decision. Each variant names the ARCH session that proposed it and
-  the AUD session that reviewed it. Drag the time to watch it grow.</p>
+  the AUD session that reviewed it. <strong>Every session is a leaf of the tree</strong>: IMPROVE sessions under the slot
+  they worked on (with their idea and every submission's gate: screen ✓/✗, promote wins/losses, landed commits; green =
+  landed something; ringed = live), ARCH and AUD sessions under the variant or proposal they wrote or reviewed. Drag the
+  time to watch it grow.</p>
   <div class="panel" style="display:flex;flex-direction:column;gap:10px">
     <div class="rp-controls">
       <button id="lt-play" type="button">&#9654; Play</button>
@@ -505,60 +518,73 @@ const LT = {"task":"christmas-tree-ahc041","until":631.82,"variants":[{"id":"v0"
   const esc = x => String(x ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const T1 = LT.until;
   const byVar = Object.fromEntries(LT.proposals.filter(p => p.variant).map(p => [p.variant, p]));
-  const slotOf = {}; LT.variants.forEach(v => v.slots.forEach(sl => slotOf[sl.id] = v.id));
-  const sessTable = list => `<table class="stbl"><tr><th>session</th><th>time</th><th>idea</th><th>submissions</th></tr>${list.map(x => `<tr>
-    <td class="m"><span class="chip ${x.role}">${x.role} ${x.sid}</span>${x.resumed ? " ↻" : ""}</td><td class="m">${fmt(x.t0)}–${fmt(x.t1)}</td>
-    <td>${esc(x.idea || (x.role === "improve" ? "free choice" : ""))}</td>
-    <td>${x.subs.map(u => u.stage === "landed" ? `<div class="okc m">${fmt(u.t)} landed ${u.commit} (+${u.d})</div>` :
-      `<div class="m ${u.ok ? "okc" : "badc"}">${fmt(u.t)} ${u.stage} ${u.ok ? "✓" : "✗"}${u.w != null && u.stage === "promote" ? ` ${u.w}/${u.l}` : ""}</div>`).join("") || '<span class="muted">—</span>'}</td></tr>`).join("")}</table>`;
+  // one leaf per session: what it worked on, when, its idea, every submission and its gate
+  const leaf = (x, t) => {
+    const subs = x.subs.filter(u => u.t <= t);
+    const landed = subs.some(u => u.stage === "landed"), live = x.t0 <= t && t < x.t1;
+    const sub = subs.map(u => u.stage === "landed" ? `<span class="okc">${fmt(u.t)} landed ${u.commit} +${u.d}</span>`
+      : `<span class="${u.ok ? "okc" : "badc"}">${fmt(u.t)} ${u.stage} ${u.ok ? "✓" : "✗"}${u.stage === "promote" && u.w != null ? " " + u.w + "/" + u.l : ""}</span>`).join("");
+    const what = x.role === "improve" ? (x.idea ? "idea: " + x.idea : "idea: free choice (no idea list on this slot)")
+      : x.role === "arch" ? "proposes a new architecture" : "reviews proposal " + (x.proposal || "");
+    return `<li class="sl"><div class="sn ${x.role} ${landed ? "landed" : ""} ${live ? "live" : ""}"><div class="l1"><span class="chip ${x.role}">${x.role} ${x.sid}</span>
+      <span class="tm">${fmt(x.t0)}–${t < x.t1 ? "now" : fmt(x.t1)}${x.resumed ? " · continues an earlier conversation" : ""}${live ? " · live" : ""}</span></div>
+      <div class="idea">${esc(what)}</div>${sub ? `<div class="subs">${sub}</div>` : ""}</div></li>`;
+  };
   function render(t) {
     document.getElementById("lt-time").textContent = fmt(t) + " UTC";
     const champ = LT.champions.filter(c => c.t <= t).pop();
-    const live = LT.sessions.filter(x => x.t0 <= t && t < x.t1);
     const started = LT.sessions.filter(x => x.t0 <= t);
-    const chips = arr => arr.map(x => `<span class="chip ${x.role}" title="${esc(x.idea || "")}">${x.role} ${x.sid}${x.resumed ? " ↻" : ""}</span>`).join(" ");
-    let html = `<li><div class="tn"><div class="hd"><span class="id">task</span><span class="nm">christmas-tree-ahc041 · deliverable app/</span>
-      <span class="st">${champ ? `champion: ${champ.variant} ${champ.commit} · promote g ${champ.pm.toFixed(4)}` : "measuring the starter"}</span></div>
-      <div class="tx">ARCH sessions propose variants; AUD sessions review them. Live now:</div>
-      <div class="live">${chips(live.filter(x => x.role !== "improve")) || '<span class="muted">—</span>'}</div>
-      <details><summary>${started.filter(x => x.role !== "improve").length} ARCH/AUD sessions so far</summary>${sessTable(started.filter(x => x.role !== "improve"))}</details></div><ul>`;
+    const live = started.filter(x => t < x.t1);
+    const used = new Set();
     const items = [];
-    for (const v of LT.variants) if (v.t != null && v.t <= t) items.push({t: v.t, html: (() => {
+    for (const v of LT.variants) if (v.t != null && v.t <= t) {
       const p = byVar[v.id];
+      const owners = p ? started.filter(x => (x.role === "arch" && x.sid === p.by) || (x.role === "aud" && x.proposal === p.id)) : [];
+      owners.forEach(x => used.add(x));
       const slots = v.slots.map(sl => {
         const ss = started.filter(x => x.slot === sl.id);
         const acc = ss.flatMap(x => x.subs).filter(u => u.stage === "landed" && u.t <= t).length;
-        return `<li><div class="tn"><div class="hd"><span class="id">slot</span><span class="nm">${esc(sl.id)}</span><span class="st">${acc ? `<span class="okc">${acc} landed</span>` : ""}</span></div>
-          <div class="tx">${esc(sl.title)} · owns <code>${esc(sl.owns.join(", "))}</code></div>
-          <div class="live">${chips(live.filter(x => x.slot === sl.id))}</div>
-          ${sl.ideas.length ? `<details><summary>${sl.ideas.length} ideas</summary><ul style="padding-left:1.2em">${sl.ideas.map(i => `<li>${esc(i)}</li>`).join("")}</ul></details>` : ""}
-          ${ss.length ? `<details><summary>${ss.length} IMPROVE sessions</summary>${sessTable(ss.map(x => ({...x, subs: x.subs.filter(u => u.t <= t)})))}</details>` : ""}</div></li>`;
+        return `<li><div class="tn"><div class="hd"><span class="id">slot</span><span class="nm">${esc(sl.id)}</span>
+          <span class="st">${ss.length} sessions${acc ? ` · <span class="okc">${acc} landed</span>` : ""}</span></div>
+          <div class="tx">${esc(sl.title)} · owns <code>${esc(sl.owns.join(", "))}</code></div></div>
+          ${ss.length ? `<ul>${ss.map(x => leaf(x, t)).join("")}</ul>` : ""}</li>`;
       }).join("");
       const isChamp = champ && champ.variant === v.id;
-      return `<li><div class="tn ${isChamp ? "champ" : ""} ${v.status === "retired" ? "ret" : ""}"><div class="hd"><span class="id">variant</span><span class="nm">${v.id}</span>
-        <span class="st">${isChamp ? "holds the champion" : v.status === "retired" ? "retired" : "opened " + fmt(v.t)}</span></div>
-        <div class="tx">${v.id === "v0" ? "the starter: one slot, the whole solver" : p ? `proposal <b>${p.id}</b> by <span class="chip arch">arch ${p.by}</span>, reviewed by <span class="chip aud">aud ${p.aud || "—"}</span>; glue + stubs measured ${p.mean} vs champion ${p.champ}` : ""}</div>
-        </div><ul>${slots}</ul></li>`; })()});
-    for (const p of LT.proposals) if (p.status === "rejected" && p.decided != null && p.decided <= t) items.push({t: p.t, html:
-      `<li><div class="tn rej"><div class="hd"><span class="id">proposal</span><span class="nm">${p.id} (${esc(p.slots.join(" · "))})</span><span class="st badc">rejected ${fmt(p.decided)}</span></div>
-       <div class="tx">by <span class="chip arch">arch ${p.by}</span>, rejected by <span class="chip aud">aud ${p.aud || "—"}</span>: ${esc(p.reason.slice(0, 260))}…</div></div></li>`});
-    for (const p of LT.proposals) if (p.t != null && p.t <= t && (p.decided == null || p.decided > t)) items.push({t: p.t, html:
-      `<li><div class="tn"><div class="hd"><span class="id">proposal</span><span class="nm">${p.id} (${esc(p.slots.join(" · "))})</span><span class="st">under review</span></div>
-       <div class="tx">by <span class="chip arch">arch ${p.by}</span>; glue + stubs ${p.mean} vs champion ${p.champ}</div></div></li>`});
+      items.push({t: v.t, html: `<li><div class="tn ${isChamp ? "champ" : ""} ${v.status === "retired" ? "ret" : ""}"><div class="hd"><span class="id">variant</span>
+        <span class="nm">${v.id}</span><span class="st">${isChamp ? "holds the champion" : v.status === "retired" && t >= T1 - 1 ? "retired" : "opened " + fmt(v.t)}</span></div>
+        <div class="tx">${v.id === "v0" ? "the starter: one slot, the whole solver" : `from proposal <b>${p.id}</b>: glue + stubs measured ${p.mean} vs champion ${p.champ}`}</div></div>
+        <ul>${owners.map(x => leaf(x, t)).join("")}${slots}</ul></li>`});
+    }
+    for (const p of LT.proposals) if (!p.variant && p.t != null && p.t <= t) {
+      const owners = started.filter(x => (x.role === "arch" && x.sid === p.by) || (x.role === "aud" && x.proposal === p.id));
+      owners.forEach(x => used.add(x));
+      const rej = p.decided != null && p.decided <= t;
+      items.push({t: p.t, html: `<li><div class="tn ${rej ? "rej" : ""}"><div class="hd"><span class="id">proposal</span><span class="nm">${p.id}</span>
+        <span class="st ${rej ? "badc" : ""}">${rej ? "rejected " + fmt(p.decided) : "under review"}</span></div>
+        <div class="tx">slots ${esc(p.slots.join(" · "))}; glue + stubs ${p.mean} vs champion ${p.champ}${rej ? "<br>review: " + esc(p.reason.slice(0, 240)) + "…" : ""}</div></div>
+        <ul>${owners.map(x => leaf(x, t)).join("")}</ul></li>`});
+    }
+    // a proposal that became a variant but whose variant is not open yet at t
+    for (const p of LT.proposals) if (p.variant && p.t != null && p.t <= t && !(LT.variants.find(v => v.id === p.variant)?.t <= t)) {
+      const owners = started.filter(x => (x.role === "arch" && x.sid === p.by) || (x.role === "aud" && x.proposal === p.id));
+      owners.forEach(x => used.add(x));
+      items.push({t: p.t, html: `<li><div class="tn"><div class="hd"><span class="id">proposal</span><span class="nm">${p.id}</span><span class="st">under review</span></div>
+        <div class="tx">slots ${esc(p.slots.join(" · "))}</div></div><ul>${owners.map(x => leaf(x, t)).join("")}</ul></li>`});
+    }
     items.sort((a, b) => a.t - b.t);
-    html += items.map(i => i.html).join("") + "</ul></li>";
-    // keep open <details> open across re-renders
-    const open = [...document.querySelectorAll("#ltree details[open] summary")].map(e => e.textContent);
-    document.getElementById("ltree").innerHTML = html;
-    document.querySelectorAll("#ltree details summary").forEach(e => { if (open.includes(e.textContent)) e.parentElement.open = true; });
+    const idle = started.filter(x => x.role !== "improve" && !used.has(x));
+    if (idle.length) items.push({t: 1e9, html: `<li><div class="tn"><div class="hd"><span class="id">architects</span><span class="nm">ARCH / AUD sessions without an accepted or rejected proposal</span>
+      <span class="st">${idle.length}</span></div><div class="tx">cut off by the time limit or a restart before they proposed, or still working</div></div><ul>${idle.map(x => leaf(x, t)).join("")}</ul></li>`});
+    document.getElementById("ltree").innerHTML = `<li><div class="tn"><div class="hd"><span class="id">task</span><span class="nm">christmas-tree-ahc041 · deliverable app/</span>
+      <span class="st">${champ ? `champion: ${champ.variant} ${champ.commit} · promote g ${champ.pm.toFixed(4)}` : "measuring the starter"}</span></div></div>
+      <ul>${items.map(i => i.html).join("")}</ul></li>`;
     const sub = started.flatMap(x => x.subs).filter(u => u.t <= t);
-    document.getElementById("lt-status").textContent = `${live.length} sessions live · ${started.length} started · ${sub.filter(u => u.stage === "promote").length} promote decisions, ${sub.filter(u => u.stage === "landed").length} landed`;
+    document.getElementById("lt-status").textContent = `${live.length} sessions live · ${started.length} started · ${sub.filter(u => u.stage === "promote").length} promote decisions · ${sub.filter(u => u.stage === "landed").length} landed`;
   }
   const slider = document.getElementById("lt-slider"), play = document.getElementById("lt-play"), speed = document.getElementById("lt-speed");
   slider.max = T1; slider.value = T1;
-  let timer = null, last = 0;
+  let timer = null, last = 0, acc = 0;
   const stop = () => { if (timer) cancelAnimationFrame(timer); timer = null; play.innerHTML = "&#9654; Play"; };
-  let acc = 0;
   const step = ts => { const dt = (ts - last) / 1000; last = ts; const v = Math.min(T1, +slider.value + dt * +speed.value); slider.value = v;
     acc += dt; if (acc > 0.2) { acc = 0; render(v); } if (v >= T1) { render(v); return stop(); } timer = requestAnimationFrame(step); };
   play.addEventListener("click", () => { if (timer) return stop(); if (+slider.value >= T1) slider.value = 300; play.innerHTML = "&#10074;&#10074; Pause"; last = performance.now(); timer = requestAnimationFrame(step); });
