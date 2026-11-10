@@ -530,13 +530,13 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
 
 <section>
   <h2>4. Where the five hard tasks stand</h2>
-  <p>Interim official scores (hidden instances, Kimi-K3-relative) of each tree's champion at the time shown,
+  <p>Final official scores (hidden instances, Kimi-K3-relative) of each tree's last champion, judged after the trees ended,
   next to the paper's single-session DeepSeek V4.1 Flash (1017) result after 12 hours.</p>
   <div class="scroll"><table class="tbl" id="tasks-table">
     <thead><tr><th>task</th><th class="num">LOT-I v2</th><th>judged at</th><th class="num">paper, DeepSeek 1017</th><th>state of the tree</th></tr></thead>
     <tbody></tbody>
   </table></div>
-  <p class="foot">The trees run 12 hours (until about 17:00 UTC); these are snapshots. Glass cutting lost its first
+  <p class="foot">The trees ran 12 hours (05:00–17:03 UTC). Four of the five beat the paper's DeepSeek; treewidth is 2.1 below. Glass cutting lost its first
   3.5 hours to an evaluation-queue bug (new screens always went before slow promotes) that is now fixed.</p>
 </section>
 
@@ -595,11 +595,11 @@ const ideas = [
   ["v2.bands","exact alternating cover of the deepest band of levels with the levels below it fixed"]
 ];
 const tasks = [
-  ["production planning (AHC058)",81.6,"08:41",47.9,"2 variants; 8 accepted steps"],
-  ["Christmas tree cutting (AHC041)",64.0,"08:38",66.8,"3 variants; 8 accepted steps"],
-  ["course timetabling (ITC2007)",51.4,"08:47",46.0,"1 variant; 3 accepted steps"],
-  ["treewidth (PACE)","judging","—",52.9,"1 variant; champion just moved"],
-  ["glass cutting (ROADEF 2018)",0.0,"08:40 (starter)",29.1,"first 2 steps accepted at 09:20–09:46"]
+  ["production planning (AHC058)",81.6,"17:00 (final)",47.9,"final champion v0 3b6ebb3; 8 accepted steps"],
+  ["Christmas tree cutting (AHC041)",67.6,"16:44 (final)",66.8,"final champion v7 3c69f1b, the first non-v0 champion"],
+  ["course timetabling (ITC2007)",67.1,"17:10 (final)",46.0,"final champion v1 27b59f8; the 13:03 champion scored 71.6 (only 6 hidden instances)"],
+  ["treewidth (PACE)",50.8,"20:34 (final)",52.9,"final champion v0 cc63f52; 3 large instances still crash after ~23 s"],
+  ["glass cutting (ROADEF 2018)",40.2,"18:47 (final)",29.1,"final champion v0 ba8ebd9; up from 12.6 at 11:30"]
 ];
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
