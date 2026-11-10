@@ -133,7 +133,7 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
 .ltree li.sl{margin:5px 0}
 
 .gloss{display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;margin:0 0 14px;font-size:14px;line-height:1.5}
-.gloss dt{font-weight:600;white-space:nowrap}.gloss dd{margin:0}
+.gloss dt{font-weight:600;white-space:nowrap}.gloss .r-improve{color:var(--worker)}.gloss .r-arch{color:var(--tree)}.gloss .r-aud{color:var(--warn)}.gloss dd{margin:0}
 .gloss .ex{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
 @media (max-width:560px){.gloss{grid-template-columns:1fr}.gloss dd{margin:0 0 6px}}
 .ttree{font-family:var(--mono);font-size:12.5px;line-height:1.55;overflow-x:auto;padding:12px 14px}
@@ -221,7 +221,7 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
     each slot, simple but correct stub implementations, and why this shape can beat the current champion. A proposal becomes a variant only if the audit accepts it; otherwise it stays in
     the tree as a rejected leaf, with the reason.<br><span class="ex">proposal p001 · rejected — plan targets a stale champion</span></dd>
     <dt><b class="r-arch" style="font-family:var(--mono)">arch</b> session</dt>
-    <dd>The <strong>architect</strong>. It reads the champion and the scoreboard and writes a proposal. If the proposal
+    <dd>The <strong>architect</strong>. It reads the champion and the scoreboard and writes a proposal. Along with the plan it
     commits the skeleton (glue plus stub slots, which must build and run), so IMPROVE sessions can start on the slots as
     soon as it is approved.</dd>
     <dt><b class="r-aud" style="font-family:var(--mono)">aud</b> session</dt>
