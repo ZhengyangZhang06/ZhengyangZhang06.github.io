@@ -345,7 +345,8 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
     let hits = [];
     const last = tk => tk.points.filter(p => p.k3 != null).pop();
     document.getElementById(P + "-leg").innerHTML = tasks.map((tk, i) => { const l = last(tk);
-      return `<span><i style="background:${col(i)}"></i>${tk.name} <b>${l ? l.k3.toFixed(1) : "—"}</b> <span class="muted">/ paper ${tk.paper}</span></span>`; }).join("");
+      const lp = tk.points[tk.points.length - 1], pendNew = lp && lp.k3 == null;
+      return `<span><i style="background:${col(i)}"></i>${tk.name} <b>${l ? l.k3.toFixed(1) : "—"}</b>${pendNew ? ` <span class="muted">(${l ? "until " + lp.t + "; " : ""}champion of ${lp.t} being judged)</span>` : ""} <span class="muted">/ paper ${tk.paper}</span></span>`; }).join("");
     const pend = tasks.reduce((a, tk) => a + tk.points.filter(p => p.k3 == null).length, 0);
     document.getElementById(P + "-note").textContent = (pend ? `Hollow markers: ${pend} champion changes whose hidden-set judging is still running. ` : "") +
       (tasks.some(t => t.id === "tw-heuristic") ? `Treewidth heuristic: its hidden set is 100 instances of 30 minutes each, so its champions are judged only now and then.` : "");
