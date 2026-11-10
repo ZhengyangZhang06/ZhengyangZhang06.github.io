@@ -11,7 +11,7 @@
   --bg:#f6f7f9; --panel:#ffffff; --ink:#1b1f27; --ink2:#4a5160; --muted:#7b8292; --line:#dde1e8; --grid:#eceff3;
   --tree:#3d55c4; --tree-soft:#e8ecfb; --worker:#0d7f6f; --worker-soft:#e2f4f0; --git:#5b616e; --git-soft:#eef0f3;
   --ok:#1f7a3a; --ok-soft:#e3f3e7; --warn:#a2610c; --bad:#b3261e;
-  --sans:"IBM Plex Sans",system-ui,sans-serif;
+  --sans:"IBM Plex Sans",system-ui,"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -80,7 +80,7 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
 .rp-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .rp-controls button{font:500 13px var(--sans);padding:5px 12px;border-radius:6px;border:1px solid var(--tree);background:var(--tree-soft);color:var(--ink);cursor:pointer}
 .rp-controls select{font:13px var(--sans);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px}
-#rp-slider{flex:1;min-width:180px;accent-color:var(--tree)}
+#rp-slider,.k3sl{flex:1;min-width:180px;accent-color:var(--tree)}
 #rp-time{font-size:15px;font-weight:500;color:var(--ink)}
 .rp-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px}
 @media (max-width:760px){.rp-grid{grid-template-columns:1fr}}
@@ -212,6 +212,12 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
   own scorer (Kimi-K3-relative, 50 = Kimi K3's own result). A champion holds until the next one replaces it. Dashed
   at the right edge: DeepSeek V4.1 Flash (1017) in the paper, one 12-hour session. Grey: time not yet run.</p>
   <div class="panel k3c" style="position:relative">
+    <div class="rp-controls" style="margin-bottom:8px">
+      <button id="k3x-play" type="button">&#9654; Play</button>
+      <label class="muted">speed <select id="k3x-speed"><option value="10">10 min/s</option><option value="30" selected>30 min/s</option><option value="60">60 min/s</option></select></label>
+      <input id="k3x-slider" class="k3sl" type="range" step="0.5" aria-label="time">
+      <span id="k3x-time" class="mono">05:00</span>
+    </div>
     <div class="k3leg" id="k3x-leg"></div>
     <div class="k3ch" id="k3x-chart"></div>
     <div class="k3tip" id="k3x-tip" hidden></div>
@@ -267,6 +273,29 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
   <p class="muted" style="margin:0;font-size:13px">So the work splits two ways: ARCH and AUD decide <em>what shape</em>
   the solver has (new variants), and IMPROVE sessions make each shape <em>better</em>, one slot at a time.
   Sessions in different slots and different variants run in parallel.</p>
+  <h3 lang="zh" style="margin:18px 0 10px;font-size:15px;padding-top:14px;border-top:1px solid var(--line)">怎么读这棵树（中文）</h3>
+  <dl class="gloss" lang="zh">
+    <dt>variant（变体）</dt>
+    <dd>求解器的一种完整架构：一个 <strong>glue</strong> 文件（主程序，负责调用各部分）加上若干 <strong>slot</strong>，每个 slot
+    是接口固定的一个部件（比如 <span class="mono">construct</span>、<span class="mono">search</span>、<span class="mono">lns</span>）。
+    <span class="mono">v0</span> 是初始代码，只有一个 slot <span class="mono">v0.app</span>。变体之间互相竞争，得分最高的是
+    <strong>champion</strong>，最终交付的就是它。同时存活的变体数有上限；新变体加入时，最弱的非 champion 变体会被淘汰，上面的 session 也会停掉。</dd>
+    <dt>proposal（提案）</dt>
+    <dd>新变体的方案加代码骨架：怎么拆成 slot、每个 slot 的精确接口、简单但正确的占位实现，以及为什么这种结构能超过当前 champion。
+    只有审核通过才变成变体；被拒的提案作为叶子留在树上，并写明理由。</dd>
+    <dt><b class="r-arch" style="font-family:var(--mono)">arch</b> session（架构师）</dt>
+    <dd>读 champion 和得分表，写出 proposal，同时提交骨架代码（glue 加占位 slot，要求能编译、能运行）。审核一通过，improve session 就能直接开始做各个 slot。</dd>
+    <dt><b class="r-aud" style="font-family:var(--mono)">aud</b> session（审核员）</dt>
+    <dd>一个独立的 session，读提案对应 commit 的代码，判断接受还是拒绝。检查 slot 是否真能独立拆开、接口是否精确，
+    占位实现是否诚实（没有把真正的工作藏在 glue 里），时间预算有没有写死，方案有没有说清楚怎么超过 champion。arch 不能批准自己的提案。</dd>
+    <dt><b class="r-improve" style="font-family:var(--mono)">improve</b> session（干活的）</dt>
+    <dd>分配到一个 slot 和一个 idea（或者 "free choice"，自由发挥），只能改这个 slot 的文件。每次提交都要过两道门：
+    <strong>screen</strong>（能否编译，能否在限制内跑完），然后 <strong>promote</strong>（在同一批实例上和当前代码成对比较，赢的实例数要多于输的）。
+    通过就是 <strong>landed</strong>：提交成 commit，树上显示 commit 和提升幅度；没通过显示 <span class="mono">screen ✗</span> 或
+    <span class="mono">promote ✗ 胜/负</span>。</dd>
+  </dl>
+  <p class="muted" lang="zh" style="margin:0;font-size:13px">分工就是两条线：arch 和 aud 决定求解器的<em>结构</em>（产生新变体），
+  improve 在每种结构里一个 slot 一个 slot 地把它<em>做好</em>。不同 slot、不同变体上的 session 并行运行。</p>
   </div>
   <div class="panel" style="display:flex;flex-direction:column;gap:10px">
     <div class="rp-controls">
@@ -287,6 +316,12 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
   replaces it, so the lines are steps. Dashed lines at the right edge: DeepSeek V4.1 Flash (1017) in the paper, one
   12-hour session. Grey area: the part of the 12-hour run that has not happened yet.</p>
   <div class="panel k3c" style="position:relative">
+    <div class="rp-controls" style="margin-bottom:8px">
+      <button id="k3-play" type="button">&#9654; Play</button>
+      <label class="muted">speed <select id="k3-speed"><option value="10">10 min/s</option><option value="30" selected>30 min/s</option><option value="60">60 min/s</option></select></label>
+      <input id="k3-slider" class="k3sl" type="range" step="0.5" aria-label="time">
+      <span id="k3-time" class="mono">05:00</span>
+    </div>
     <div class="k3leg" id="k3-leg"></div>
     <div class="k3ch" id="k3-chart"></div>
     <div class="k3tip" id="k3-tip" hidden></div>
@@ -300,66 +335,83 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
 <script>
 (async () => {
   let D; try { D = await (await fetch("assets/loti-k3-curve.json", {cache: "no-store"})).json(); } catch (e) { return; }
-  function draw(P, tasks) {
   const m = h => { const [a, b] = h.split(":").map(Number); return a * 60 + b; };
+  const hm = v => `${String(Math.floor(v / 60)).padStart(2, "0")}:${String(Math.floor(v % 60)).padStart(2, "0")}`;
   const W = 900, H = 340, L = 40, R = 118, T = 14, B = 30, x0 = m("05:00"), x1 = m(D.end), now = Math.min(m(D.now), x1);
   const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - v / 100) * (H - T - B);
   const col = i => `var(--s${i + 1})`;
-  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Kimi-K3-relative hidden-set score of each tree's champion over time">`;
-  s += `<rect class="fut" x="${X(now)}" y="${T}" width="${X(x1) - X(now)}" height="${H - T - B}"/>`;
-  for (const t of [0, 25, 50, 75, 100]) s += `<line class="${t === 50 ? "k50" : "gl"}" x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${L - 6}" y="${Y(t) + 4}" text-anchor="end">${t}</text>`;
-  s += `<text x="${L + 4}" y="${Y(50) - 5}">Kimi K3 = 50</text>`;
-  for (let h = 5; h <= 17; h += 2) s += `<text x="${X(h * 60)}" y="${H - 9}" text-anchor="middle">${String(h).padStart(2, "0")}:00</text>`;
-  s += `<line class="ax" x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}"/>`;
-  s += `<text x="${W - R + 8}" y="${T + 11}">paper</text><text x="${W - R + 8}" y="${T + 25}">DeepSeek</text>`;
-  s += `<text x="${X(now)}" y="${T + 11}" text-anchor="middle" style="fill:var(--ink2)">now ${D.now}</text>`;
-  const hits = [];
-  tasks.forEach((tk, i) => {
-    // paper reference: short dashed segment in the right margin
-    s += `<line class="pr" style="stroke:${col(i)}" x1="${W - R + 8}" x2="${W - R + 30}" y1="${Y(tk.paper)}" y2="${Y(tk.paper)}"><title>${tk.name}: paper DeepSeek 1017 ${tk.paper}</title></line>`;
-    const known = tk.points.filter(p => p.k3 != null);
-    if (!known.length) return;
-    let d = "", prev = null;
-    for (const p of known) { const x = X(m(p.t)), y = Y(p.k3); d += prev == null ? `M${x} ${y}` : ` H${x} V${y}`; prev = y; }
-    d += ` H${X(now)}`;
-    s += `<path class="ln" style="stroke:${col(i)}" d="${d}"/>`;
-    for (const p of tk.points) {
-      const x = X(m(p.t));
-      if (p.k3 == null) { // champion change not judged yet: hollow marker on the current step
-        const before = known.filter(q => m(q.t) <= m(p.t)).pop();
-        if (before) s += `<circle class="pend" style="stroke:${col(i)}" cx="${x}" cy="${Y(before.k3)}" r="3.5"/>`;
-        continue;
-      }
-      s += `<circle class="dot" style="fill:${col(i)}" cx="${x}" cy="${Y(p.k3)}" r="4.5"/>`;
-      hits.push({x, y: Y(p.k3), tk, p, i});
+  function chart(P, tasks) {
+    const el = document.getElementById(P + "-chart"), tip = document.getElementById(P + "-tip");
+    let hits = [];
+    const last = tk => tk.points.filter(p => p.k3 != null).pop();
+    document.getElementById(P + "-leg").innerHTML = tasks.map((tk, i) => { const l = last(tk);
+      return `<span><i style="background:${col(i)}"></i>${tk.name} <b>${l ? l.k3.toFixed(1) : "—"}</b> <span class="muted">/ paper ${tk.paper}</span></span>`; }).join("");
+    const pend = tasks.reduce((a, tk) => a + tk.points.filter(p => p.k3 == null).length, 0);
+    document.getElementById(P + "-note").textContent = (pend ? `Hollow markers: ${pend} champion changes whose hidden-set judging is still running. ` : "") +
+      (tasks.some(t => t.id === "tw-heuristic") ? `Treewidth heuristic: its hidden set is 100 instances of 30 minutes each, so its champions are judged only now and then.` : "");
+    document.querySelector("#" + P + "-table tbody").innerHTML = tasks.flatMap(tk => tk.points.map(p =>
+      `<tr><td>${tk.name}</td><td class="mono">${p.t}</td><td class="mono">${p.commit}</td><td class="num">${p.k3 == null ? "judging…" : p.k3.toFixed(1)}</td></tr>`)).join("");
+    function draw(t) { // t: minutes since 00:00; nothing after t is drawn yet
+      let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Kimi-K3-relative hidden-set score of the champion over time">`;
+      s += `<rect class="fut" x="${X(now)}" y="${T}" width="${X(x1) - X(now)}" height="${H - T - B}"/>`;
+      for (const v of [0, 25, 50, 75, 100]) s += `<line class="${v === 50 ? "k50" : "gl"}" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`;
+      s += `<text x="${L + 4}" y="${Y(50) - 5}">Kimi K3 = 50</text>`;
+      for (let h = 5; h <= 17; h += 2) s += `<text x="${X(h * 60)}" y="${H - 9}" text-anchor="middle">${String(h).padStart(2, "0")}:00</text>`;
+      s += `<line class="ax" x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}"/>`;
+      s += `<text x="${W - R + 8}" y="${T + 11}">paper</text><text x="${W - R + 8}" y="${T + 25}">DeepSeek</text>`;
+      hits = [];
+      tasks.forEach((tk, i) => {
+        s += `<line class="pr" style="stroke:${col(i)}" x1="${W - R + 8}" x2="${W - R + 30}" y1="${Y(tk.paper)}" y2="${Y(tk.paper)}"><title>${tk.name}: paper DeepSeek 1017 ${tk.paper}</title></line>`;
+        const known = tk.points.filter(p => p.k3 != null && m(p.t) <= t);
+        if (!known.length) return;
+        let d = "";
+        known.forEach((p, j) => { const x = X(m(p.t)), y = Y(p.k3); d += j ? ` H${x} V${y}` : `M${x} ${y}`; });
+        d += ` H${X(t)}`;
+        s += `<path class="ln" style="stroke:${col(i)}" d="${d}"/>`;
+        for (const p of tk.points) {
+          if (m(p.t) > t) continue;
+          const x = X(m(p.t));
+          if (p.k3 == null) { const before = known.filter(q => m(q.t) <= m(p.t)).pop();
+            if (before) s += `<circle class="pend" style="stroke:${col(i)}" cx="${x}" cy="${Y(before.k3)}" r="3.5"/>`; continue; }
+          s += `<circle class="dot" style="fill:${col(i)}" cx="${x}" cy="${Y(p.k3)}" r="4.5"/>`;
+          hits.push({x, y: Y(p.k3), tk, p, i});
+        }
+        const cur = known[known.length - 1];
+        if (tasks.length <= 2) s += `<text x="${X(t) + 6}" y="${Y(cur.k3) - 7}" style="fill:var(--ink);font-weight:600;font-size:13px">${cur.k3.toFixed(1)}</text>`;
+      });
+      s += `<line x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${H - B}" stroke="var(--warn)" stroke-width="1.5"/>`;
+      s += `<text x="${X(t)}" y="${T + 11}" text-anchor="${X(t) > W - R - 40 ? "end" : "middle"}" style="fill:var(--ink2)">${hm(t)}${t >= now ? " (now)" : ""}</text>`;
+      el.innerHTML = s + "</svg>";
+      document.getElementById(P + "-time").textContent = hm(t) + " UTC";
     }
-  });
-  s += `<rect x="${L}" y="${T}" width="${W - R - L}" height="${H - T - B}" fill="transparent"/>`;
-  const el = document.getElementById(P + "-chart"); el.innerHTML = s + "</svg>";
-  const last = tk => tk.points.filter(p => p.k3 != null).pop();
-  document.getElementById(P + "-leg").innerHTML = tasks.map((tk, i) => { const l = last(tk);
-    return `<span><i style="background:${col(i)}"></i>${tk.name} <b>${l ? l.k3.toFixed(1) : "—"}</b> <span class="muted">/ paper ${tk.paper}</span></span>`; }).join("");
-  const pend = tasks.reduce((a, tk) => a + tk.points.filter(p => p.k3 == null).length, 0);
-  document.getElementById(P + "-note").textContent = (pend ? `Hollow markers: ${pend} champion changes whose hidden-set judging is still running. ` : "") +
-    (tasks.some(t => t.id === "tw-heuristic") ? `Treewidth heuristic: its hidden set is 100 instances of 30 minutes each, so its champions are judged only now and then.` : "");
-  document.querySelector("#" + P + "-table tbody").innerHTML = tasks.flatMap(tk => tk.points.map(p =>
-    `<tr><td>${tk.name}</td><td class="mono">${p.t}</td><td class="mono">${p.commit}</td><td class="num">${p.k3 == null ? "judging…" : p.k3.toFixed(1)}</td></tr>`)).join("");
-  const svg = el.querySelector("svg"), tip = document.getElementById(P + "-tip");
-  svg.addEventListener("pointermove", ev => {
-    const r = svg.getBoundingClientRect(), k = W / r.width, px = (ev.clientX - r.left) * k, py = (ev.clientY - r.top) * k;
-    let best = null, bd = 1e9;
-    for (const h of hits) { const dd = Math.hypot(h.x - px, (h.y - py) * 0.6); if (dd < bd) { bd = dd; best = h; } }
-    if (!best || bd > 40) { tip.hidden = true; return; }
-    tip.innerHTML = `<b style="color:${col(best.i)}">●</b> ${best.tk.name}<br>champion ${best.p.commit} from ${best.p.t} UTC<br>K3-relative <b>${best.p.k3.toFixed(1)}</b> · paper ${best.tk.paper}`;
-    tip.hidden = false;
-    const pr = el.parentElement.getBoundingClientRect();
-    let lx = best.x / k + r.left - pr.left + 12; if (lx > pr.width - 230) lx -= 250;
-    tip.style.left = lx + "px"; tip.style.top = (best.y / k + r.top - pr.top - 10) + "px";
-  });
-  svg.addEventListener("pointerleave", () => tip.hidden = true);
+    el.addEventListener("pointermove", ev => {
+      const svg = el.querySelector("svg"); if (!svg) return;
+      const r = svg.getBoundingClientRect(), k = W / r.width, px = (ev.clientX - r.left) * k, py = (ev.clientY - r.top) * k;
+      let best = null, bd = 1e9;
+      for (const h of hits) { const dd = Math.hypot(h.x - px, (h.y - py) * 0.6); if (dd < bd) { bd = dd; best = h; } }
+      if (!best || bd > 40) { tip.hidden = true; return; }
+      tip.innerHTML = `<b style="color:${col(best.i)}">●</b> ${best.tk.name}<br>champion ${best.p.commit} from ${best.p.t} UTC<br>K3-relative <b>${best.p.k3.toFixed(1)}</b> · paper ${best.tk.paper}`;
+      tip.hidden = false;
+      const pr = el.parentElement.getBoundingClientRect();
+      let lx = best.x / k + r.left - pr.left + 12; if (lx > pr.width - 230) lx -= 250;
+      tip.style.left = lx + "px"; tip.style.top = (best.y / k + r.top - pr.top - 10) + "px";
+    });
+    el.addEventListener("pointerleave", () => tip.hidden = true);
+    // animation: Play / slider; plays once by itself the first time the chart scrolls into view
+    const sl = document.getElementById(P + "-slider"), btn = document.getElementById(P + "-play"), sp = document.getElementById(P + "-speed");
+    sl.min = x0; sl.max = now; sl.value = now; draw(now);
+    let raf = null, lt = 0;
+    const stop = () => { if (raf) cancelAnimationFrame(raf); raf = null; btn.innerHTML = "&#9654; Play"; };
+    const step = ts => { if (!raf) return; const v = Math.min(now, +sl.value + (ts - lt) / 1000 * +sp.value); lt = ts;
+      sl.value = v; draw(v); if (v >= now) return stop(); raf = requestAnimationFrame(step); };
+    const start = () => { if (+sl.value >= now) sl.value = x0; btn.innerHTML = "&#10074;&#10074; Pause"; lt = performance.now(); raf = requestAnimationFrame(step); };
+    btn.addEventListener("click", () => raf ? stop() : start());
+    sl.addEventListener("input", () => { stop(); draw(+sl.value); });
+    if ("IntersectionObserver" in window) { const io = new IntersectionObserver(es => {
+      if (es.some(e => e.isIntersecting)) { io.disconnect(); if (!raf) start(); } }, {threshold: 0.6}); io.observe(el); }
   }
-  draw("k3", D.tasks);
-  draw("k3x", D.tasks.filter(t => t.id === "christmas-tree-ahc041"));
+  chart("k3", D.tasks);
+  chart("k3x", D.tasks.filter(t => t.id === "christmas-tree-ahc041"));
 })();
 </script>
 
