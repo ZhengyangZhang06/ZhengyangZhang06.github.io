@@ -136,6 +136,18 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
 .gloss dt{font-weight:600;white-space:nowrap}.gloss .r-improve{color:var(--worker)}.gloss .r-arch{color:var(--tree)}.gloss .r-aud{color:var(--warn)}.gloss dd{margin:0}
 .gloss .ex{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
 @media (max-width:560px){.gloss{grid-template-columns:1fr}.gloss dd{margin:0 0 6px}}
+.k3c{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#c98500;--s5:#e87ba4}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .k3c{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181}}
+:root[data-theme="dark"] .k3c{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181}
+.k3c #k3-chart{overflow-x:auto}.k3c svg{width:100%;min-width:640px;height:auto;display:block;font:11.5px var(--sans);fill:var(--muted)}
+.k3c .gl{stroke:var(--grid)}.k3c .ax{stroke:var(--line)}.k3c .k50{stroke:var(--ink2);stroke-dasharray:2 3}
+.k3c .fut{fill:var(--grid);opacity:.55}.k3c .ln{fill:none;stroke-width:2;stroke-linejoin:round}
+.k3c .pr{stroke-width:2;stroke-dasharray:5 4}.k3c .dot{stroke:var(--panel);stroke-width:2}
+.k3c .pend{fill:var(--panel);stroke-width:1.5}
+.k3leg{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 8px;font-size:13px;color:var(--ink2)}
+.k3leg span{display:inline-flex;align-items:center;gap:6px}.k3leg i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.k3tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;
+  padding:6px 9px;font-size:12.5px;line-height:1.45;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap}
 .ttree{font-family:var(--mono);font-size:12.5px;line-height:1.55;overflow-x:auto;padding:12px 14px}
 .ttree .tl{display:flex;align-items:baseline;white-space:nowrap}
 .ttree .tp{white-space:pre;color:var(--muted);flex:none}
@@ -252,6 +264,85 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
   </div>
   <div class="panel ttree" id="ltree"></div>
 </section>
+
+<section id="k3-section">
+  <h2>Official score over time: all five trees</h2>
+  <p>Each line is one tree's champion, judged on the task's full <strong>hidden</strong> set with TCSExam's own scorer
+  and reported as the Kimi-K3-relative score (50 = Kimi K3's own result). A champion holds until the next one
+  replaces it, so the lines are steps. Dashed lines at the right edge: DeepSeek V4.1 Flash (1017) in the paper, one
+  12-hour session. Grey area: the part of the 12-hour run that has not happened yet.</p>
+  <div class="panel k3c" style="position:relative">
+    <div class="k3leg" id="k3-leg"></div>
+    <div id="k3-chart"></div>
+    <div class="k3tip" id="k3-tip" hidden></div>
+    <p class="foot" id="k3-note" style="margin-top:6px"></p>
+  </div>
+  <div class="scroll"><table class="tbl" id="k3-table">
+    <thead><tr><th>task</th><th>champion since (UTC)</th><th>commit</th><th class="num">K3-relative</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+</section>
+<script>
+(async () => {
+  let D; try { D = await (await fetch("assets/loti-k3-curve.json", {cache: "no-store"})).json(); } catch (e) { return; }
+  const m = h => { const [a, b] = h.split(":").map(Number); return a * 60 + b; };
+  const W = 900, H = 340, L = 40, R = 118, T = 14, B = 30, x0 = m("05:00"), x1 = m(D.end), now = Math.min(m(D.now), x1);
+  const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - v / 100) * (H - T - B);
+  const col = i => `var(--s${i + 1})`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Kimi-K3-relative hidden-set score of each tree's champion over time">`;
+  s += `<rect class="fut" x="${X(now)}" y="${T}" width="${X(x1) - X(now)}" height="${H - T - B}"/>`;
+  for (const t of [0, 25, 50, 75, 100]) s += `<line class="${t === 50 ? "k50" : "gl"}" x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${L - 6}" y="${Y(t) + 4}" text-anchor="end">${t}</text>`;
+  s += `<text x="${L + 4}" y="${Y(50) - 5}">Kimi K3 = 50</text>`;
+  for (let h = 5; h <= 17; h += 2) s += `<text x="${X(h * 60)}" y="${H - 9}" text-anchor="middle">${String(h).padStart(2, "0")}:00</text>`;
+  s += `<line class="ax" x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}"/>`;
+  s += `<text x="${W - R + 8}" y="${T + 11}">paper</text><text x="${W - R + 8}" y="${T + 25}">DeepSeek</text>`;
+  s += `<text x="${X(now)}" y="${T + 11}" text-anchor="middle" style="fill:var(--ink2)">now ${D.now}</text>`;
+  const hits = [];
+  D.tasks.forEach((tk, i) => {
+    // paper reference: short dashed segment in the right margin
+    s += `<line class="pr" style="stroke:${col(i)}" x1="${W - R + 8}" x2="${W - R + 30}" y1="${Y(tk.paper)}" y2="${Y(tk.paper)}"><title>${tk.name}: paper DeepSeek 1017 ${tk.paper}</title></line>`;
+    const known = tk.points.filter(p => p.k3 != null);
+    if (!known.length) return;
+    let d = "", prev = null;
+    for (const p of known) { const x = X(m(p.t)), y = Y(p.k3); d += prev == null ? `M${x} ${y}` : ` H${x} V${y}`; prev = y; }
+    d += ` H${X(now)}`;
+    s += `<path class="ln" style="stroke:${col(i)}" d="${d}"/>`;
+    for (const p of tk.points) {
+      const x = X(m(p.t));
+      if (p.k3 == null) { // champion change not judged yet: hollow marker on the current step
+        const before = known.filter(q => m(q.t) <= m(p.t)).pop();
+        if (before) s += `<circle class="pend" style="stroke:${col(i)}" cx="${x}" cy="${Y(before.k3)}" r="3.5"/>`;
+        continue;
+      }
+      s += `<circle class="dot" style="fill:${col(i)}" cx="${x}" cy="${Y(p.k3)}" r="4.5"/>`;
+      hits.push({x, y: Y(p.k3), tk, p, i});
+    }
+  });
+  s += `<rect id="k3-hit" x="${L}" y="${T}" width="${W - R - L}" height="${H - T - B}" fill="transparent"/>`;
+  const el = document.getElementById("k3-chart"); el.innerHTML = s + "</svg>";
+  const last = tk => tk.points.filter(p => p.k3 != null).pop();
+  document.getElementById("k3-leg").innerHTML = D.tasks.map((tk, i) => { const l = last(tk);
+    return `<span><i style="background:${col(i)}"></i>${tk.name} <b>${l ? l.k3.toFixed(1) : "—"}</b> <span class="muted">/ paper ${tk.paper}</span></span>`; }).join("");
+  const pend = D.tasks.reduce((a, tk) => a + tk.points.filter(p => p.k3 == null).length, 0);
+  document.getElementById("k3-note").textContent = (pend ? `Hollow markers: ${pend} champion changes whose hidden-set judging is still running. ` : "") +
+    `Treewidth heuristic: its hidden set is 100 instances of 30 minutes each, so its champions are judged only now and then.`;
+  document.querySelector("#k3-table tbody").innerHTML = D.tasks.flatMap(tk => tk.points.map(p =>
+    `<tr><td>${tk.name}</td><td class="mono">${p.t}</td><td class="mono">${p.commit}</td><td class="num">${p.k3 == null ? "judging…" : p.k3.toFixed(1)}</td></tr>`)).join("");
+  const svg = el.querySelector("svg"), tip = document.getElementById("k3-tip");
+  svg.addEventListener("pointermove", ev => {
+    const r = svg.getBoundingClientRect(), k = W / r.width, px = (ev.clientX - r.left) * k, py = (ev.clientY - r.top) * k;
+    let best = null, bd = 1e9;
+    for (const h of hits) { const dd = Math.hypot(h.x - px, (h.y - py) * 0.6); if (dd < bd) { bd = dd; best = h; } }
+    if (!best || bd > 40) { tip.hidden = true; return; }
+    tip.innerHTML = `<b style="color:${col(best.i)}">●</b> ${best.tk.name}<br>champion ${best.p.commit} from ${best.p.t} UTC<br>K3-relative <b>${best.p.k3.toFixed(1)}</b> · paper ${best.tk.paper}`;
+    tip.hidden = false;
+    const pr = el.parentElement.getBoundingClientRect();
+    let lx = best.x / k + r.left - pr.left + 12; if (lx > pr.width - 230) lx -= 250;
+    tip.style.left = lx + "px"; tip.style.top = (best.y / k + r.top - pr.top - 10) + "px";
+  });
+  svg.addEventListener("pointerleave", () => tip.hidden = true);
+})();
+</script>
 
 <section>
   <h2>1. Why a proof tree does not fit an optimization task</h2>

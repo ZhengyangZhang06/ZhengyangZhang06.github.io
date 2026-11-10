@@ -1,0 +1,151 @@
+{
+ "now": "10:55",
+ "end": "17:05",
+ "tasks": [
+  {
+   "id": "christmas-tree-ahc041",
+   "name": "Christmas tree cutting",
+   "paper": 66.8,
+   "points": [
+    {
+     "t": "05:03",
+     "commit": "3dff33c",
+     "k3": null
+    },
+    {
+     "t": "05:38",
+     "commit": "659a084",
+     "k3": null
+    },
+    {
+     "t": "05:42",
+     "commit": "c1d227b",
+     "k3": null
+    },
+    {
+     "t": "05:43",
+     "commit": "70b02c7",
+     "k3": null
+    },
+    {
+     "t": "05:49",
+     "commit": "0406f12",
+     "k3": 39.1
+    },
+    {
+     "t": "06:20",
+     "commit": "84e4c83",
+     "k3": 40.0
+    },
+    {
+     "t": "06:38",
+     "commit": "6540d4d",
+     "k3": null
+    },
+    {
+     "t": "06:54",
+     "commit": "a90a92a",
+     "k3": null
+    },
+    {
+     "t": "07:14",
+     "commit": "4fa538b",
+     "k3": 64.0
+    }
+   ]
+  },
+  {
+   "id": "ahc058-atcoder",
+   "name": "AHC058",
+   "paper": 47.9,
+   "points": [
+    {
+     "t": "05:03",
+     "commit": "491226b",
+     "k3": null
+    },
+    {
+     "t": "05:16",
+     "commit": "761ceac",
+     "k3": null
+    },
+    {
+     "t": "05:25",
+     "commit": "c639029",
+     "k3": null
+    },
+    {
+     "t": "05:36",
+     "commit": "7e8647b",
+     "k3": 45.8
+    },
+    {
+     "t": "06:17",
+     "commit": "89ef013",
+     "k3": null
+    },
+    {
+     "t": "06:23",
+     "commit": "a4a27dd",
+     "k3": 45.9
+    },
+    {
+     "t": "07:14",
+     "commit": "9a1c41d",
+     "k3": null
+    },
+    {
+     "t": "07:28",
+     "commit": "3b6ebb3",
+     "k3": 81.6
+    }
+   ]
+  },
+  {
+   "id": "curriculum-itc2007",
+   "name": "Curriculum timetabling",
+   "paper": 46.0,
+   "points": [
+    {
+     "t": "05:04",
+     "commit": "7331ce3",
+     "k3": null
+    },
+    {
+     "t": "07:56",
+     "commit": "a9a4d55",
+     "k3": 51.4
+    }
+   ]
+  },
+  {
+   "id": "glasscut-roadef2018",
+   "name": "Glass cutting",
+   "paper": 29.1,
+   "points": [
+    {
+     "t": "05:03",
+     "commit": "ad5cbdf",
+     "k3": 0.0
+    }
+   ]
+  },
+  {
+   "id": "tw-heuristic",
+   "name": "Treewidth heuristic",
+   "paper": 52.9,
+   "points": [
+    {
+     "t": "05:58",
+     "commit": "13afebb",
+     "k3": null
+    },
+    {
+     "t": "09:48",
+     "commit": "f19b335",
+     "k3": null
+    }
+   ]
+  }
+ ]
+}
