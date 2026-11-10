@@ -131,6 +131,17 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
 .sn .idea{color:var(--ink2);margin-top:2px}
 .sn .subs{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:3px;font:11.5px var(--mono)}
 .ltree li.sl{margin:5px 0}
+
+.ttree{font-family:var(--mono);font-size:12.5px;line-height:1.55;overflow-x:auto;padding:12px 14px}
+.ttree .tl{display:flex;align-items:baseline;white-space:nowrap}
+.ttree .tp{white-space:pre;color:var(--muted);flex:none}
+.ttree .tc{white-space:nowrap}
+.ttree .tl.var .tc,.ttree .tl.root .tc{font-size:13px}
+.ttree .tl.var{margin-top:6px}
+.ttree .tl.rej .tc{opacity:.7}
+.ttree .r-improve{color:var(--worker);font-weight:500}.ttree .r-arch{color:var(--tree);font-weight:500}.ttree .r-aud{color:var(--warn);font-weight:500}
+.ttree .tl.won{background:var(--ok-soft)}
+.ttree .champc{color:var(--tree);font-weight:500}.ttree .livec{color:var(--tree)}
 </style>
 </head>
 <body>
@@ -186,10 +197,10 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
   <p>The same tree as a structure. Under the task are its <strong>variants</strong> (architectures) and the rejected
   proposals; under each variant its <strong>slots</strong>; on each slot the IMPROVE sessions that worked there, the idea
   each was given, and every submission with its gate decision. Each variant names the ARCH session that proposed it and
-  the AUD session that reviewed it. <strong>Every session is a leaf of the tree</strong>: IMPROVE sessions under the slot
-  they worked on (with their idea and every submission's gate: screen ✓/✗, promote wins/losses, landed commits; green =
-  landed something; ringed = live), ARCH and AUD sessions under the variant or proposal they wrote or reviewed. Drag the
-  time to watch it grow.</p>
+  the AUD session that reviewed it. <strong>Each session is one line of the tree</strong>: IMPROVE sessions under the slot they worked on (their idea and
+  result: the commits they landed, or their promote wins/losses), ARCH and AUD sessions under the variant or proposal they
+  wrote or reviewed. A slot with many sessions lists the ones that landed something or are live and sums up the rest.
+  Drag the time to watch it grow.</p>
   <div class="panel" style="display:flex;flex-direction:column;gap:10px">
     <div class="rp-controls">
       <button id="lt-play" type="button">&#9654; Play</button>
@@ -199,7 +210,7 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
     </div>
     <div id="lt-status" class="muted" style="font-size:13px"></div>
   </div>
-  <ul class="ltree" id="ltree"></ul>
+  <div class="panel ttree" id="ltree"></div>
 </section>
 
 <section>
@@ -516,77 +527,69 @@ const LT = {"task":"christmas-tree-ahc041","until":631.82,"variants":[{"id":"v0"
 (() => {
   const fmt = t => String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(Math.floor(t % 60)).padStart(2, "0");
   const esc = x => String(x ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const T1 = LT.until;
+  const T1 = LT.until, MAXS = 6;
   const byVar = Object.fromEntries(LT.proposals.filter(p => p.variant).map(p => [p.variant, p]));
-  // one leaf per session: what it worked on, when, its idea, every submission and its gate
-  const leaf = (x, t) => {
-    const subs = x.subs.filter(u => u.t <= t);
-    const landed = subs.some(u => u.stage === "landed"), live = x.t0 <= t && t < x.t1;
-    const sub = subs.map(u => u.stage === "landed" ? `<span class="okc">${fmt(u.t)} landed ${u.commit} +${u.d}</span>`
-      : `<span class="${u.ok ? "okc" : "badc"}">${fmt(u.t)} ${u.stage} ${u.ok ? "✓" : "✗"}${u.stage === "promote" && u.w != null ? " " + u.w + "/" + u.l : ""}</span>`).join("");
-    const what = x.role === "improve" ? (x.idea ? "idea: " + x.idea : "idea: free choice (no idea list on this slot)")
-      : x.role === "arch" ? "proposes a new architecture" : "reviews proposal " + (x.proposal || "");
-    return `<li class="sl"><div class="sn ${x.role} ${landed ? "landed" : ""} ${live ? "live" : ""}"><div class="l1"><span class="chip ${x.role}">${x.role} ${x.sid}</span>
-      <span class="tm">${fmt(x.t0)}–${t < x.t1 ? "now" : fmt(x.t1)}${x.resumed ? " · continues an earlier conversation" : ""}${live ? " · live" : ""}</span></div>
-      <div class="idea">${esc(what)}</div>${sub ? `<div class="subs">${sub}</div>` : ""}</div></li>`;
+  const short = (x, n) => (x = String(x || ""), x.length > n ? x.slice(0, n - 1) + "…" : x);
+  // one line per session
+  const sline = (x, t) => {
+    const subs = x.subs.filter(u => u.t <= t), live = t < x.t1;
+    const landed = subs.filter(u => u.stage === "landed");
+    const pr = subs.filter(u => u.stage === "promote"), sc = subs.filter(u => u.stage === "screen");
+    const what = x.role === "improve" ? "idea: " + short(x.idea || "free choice", 70) : x.role === "arch" ? "proposes a new architecture" : "reviews proposal " + (x.proposal || "");
+    const res = landed.length ? landed.map(u => `<span class="okc">landed ${u.commit} +${u.d}</span>`).join(", ")
+      : pr.length ? `<span class="badc">promote ✗ ${pr.map(u => u.w + "/" + u.l).join(", ")}</span>`
+      : sc.some(u => !u.ok) ? '<span class="badc">screen ✗</span>' : "";
+    return {cls: x.role + (landed.length ? " won" : ""), html: `<b class="r-${x.role}">${x.role} ${x.sid}</b>  <span class="muted">${fmt(x.t0)}–${live ? "now" : fmt(x.t1)}${x.resumed ? " · continued" : ""}</span>  ${esc(what)}${res ? "  · " + res : ""}${live ? '  <span class="livec">(live)</span>' : ""}`};
   };
-  function render(t) {
-    document.getElementById("lt-time").textContent = fmt(t) + " UTC";
+  const sessionsNode = (list, t) => {
+    if (list.length <= MAXS) return list.map(x => ({line: sline(x, t)}));
+    const keep = list.filter(x => x.subs.some(u => u.stage === "landed" && u.t <= t) || t < x.t1);
+    const rest = list.filter(x => !keep.includes(x)), subs = rest.flatMap(x => x.subs.filter(u => u.t <= t));
+    const pf = subs.filter(u => u.stage === "promote").length, sf = subs.filter(u => u.stage === "screen" && !u.ok).length;
+    const none = rest.filter(x => !x.subs.some(u => u.t <= t)).length;
+    return keep.map(x => ({line: sline(x, t)})).concat(rest.length ? [{line: {cls: "more", html: `<span class="muted">… ${rest.length} more sessions without a landed change: ${pf} promote ✗, ${sf} screen ✗, ${none} without a submission</span>`}}] : []);
+  };
+  function nodes(t) {
     const champ = LT.champions.filter(c => c.t <= t).pop();
-    const started = LT.sessions.filter(x => x.t0 <= t);
-    const live = started.filter(x => t < x.t1);
-    const used = new Set();
-    const items = [];
+    const started = LT.sessions.filter(x => x.t0 <= t), used = new Set(), items = [];
+    const owners = p => { const o = started.filter(x => (x.role === "arch" && x.sid === p.by) || (x.role === "aud" && x.proposal === p.id)); o.forEach(x => used.add(x)); return o; };
     for (const v of LT.variants) if (v.t != null && v.t <= t) {
-      const p = byVar[v.id];
-      const owners = p ? started.filter(x => (x.role === "arch" && x.sid === p.by) || (x.role === "aud" && x.proposal === p.id)) : [];
-      owners.forEach(x => used.add(x));
-      const slots = v.slots.map(sl => {
-        const ss = started.filter(x => x.slot === sl.id);
-        const acc = ss.flatMap(x => x.subs).filter(u => u.stage === "landed" && u.t <= t).length;
-        return `<li><div class="tn"><div class="hd"><span class="id">slot</span><span class="nm">${esc(sl.id)}</span>
-          <span class="st">${ss.length} sessions${acc ? ` · <span class="okc">${acc} landed</span>` : ""}</span></div>
-          <div class="tx">${esc(sl.title)} · owns <code>${esc(sl.owns.join(", "))}</code></div></div>
-          ${ss.length ? `<ul>${ss.map(x => leaf(x, t)).join("")}</ul>` : ""}</li>`;
-      }).join("");
-      const isChamp = champ && champ.variant === v.id;
-      items.push({t: v.t, html: `<li><div class="tn ${isChamp ? "champ" : ""} ${v.status === "retired" ? "ret" : ""}"><div class="hd"><span class="id">variant</span>
-        <span class="nm">${v.id}</span><span class="st">${isChamp ? "holds the champion" : v.status === "retired" && t >= T1 - 1 ? "retired" : "opened " + fmt(v.t)}</span></div>
-        <div class="tx">${v.id === "v0" ? "the starter: one slot, the whole solver" : `from proposal <b>${p.id}</b>: glue + stubs measured ${p.mean} vs champion ${p.champ}`}</div></div>
-        <ul>${owners.map(x => leaf(x, t)).join("")}${slots}</ul></li>`});
+      const p = byVar[v.id], isChamp = champ && champ.variant === v.id;
+      const kids = (p ? owners(p).map(x => ({line: sline(x, t)})) : []).concat(v.slots.map(sl => {
+        const ss = started.filter(x => x.slot === sl.id), acc = ss.flatMap(x => x.subs).filter(u => u.stage === "landed" && u.t <= t).length;
+        return {line: {cls: "slot", html: `<b>slot ${esc(sl.id)}</b>  <span class="muted">${esc(short(sl.title, 60))} · ${ss.length} sessions${acc ? "" : ""}</span>${acc ? `  <span class="okc">${acc} landed</span>` : ""}`}, kids: sessionsNode(ss, t)};
+      }));
+      items.push({t: v.t, n: {line: {cls: "var" + (isChamp ? " champ" : ""), html: `<b>variant ${v.id}</b>  <span class="muted">${v.id === "v0" ? "the starter, one slot" : `from ${p.id} · stubs ${p.mean} vs champion ${p.champ}`}${v.status === "retired" && t >= T1 - 1 ? " · retired" : ""}</span>${isChamp ? '  <span class="champc">holds the champion</span>' : ""}`}, kids}});
     }
-    for (const p of LT.proposals) if (!p.variant && p.t != null && p.t <= t) {
-      const owners = started.filter(x => (x.role === "arch" && x.sid === p.by) || (x.role === "aud" && x.proposal === p.id));
-      owners.forEach(x => used.add(x));
-      const rej = p.decided != null && p.decided <= t;
-      items.push({t: p.t, html: `<li><div class="tn ${rej ? "rej" : ""}"><div class="hd"><span class="id">proposal</span><span class="nm">${p.id}</span>
-        <span class="st ${rej ? "badc" : ""}">${rej ? "rejected " + fmt(p.decided) : "under review"}</span></div>
-        <div class="tx">slots ${esc(p.slots.join(" · "))}; glue + stubs ${p.mean} vs champion ${p.champ}${rej ? "<br>review: " + esc(p.reason.slice(0, 240)) + "…" : ""}</div></div>
-        <ul>${owners.map(x => leaf(x, t)).join("")}</ul></li>`});
-    }
-    // a proposal that became a variant but whose variant is not open yet at t
-    for (const p of LT.proposals) if (p.variant && p.t != null && p.t <= t && !(LT.variants.find(v => v.id === p.variant)?.t <= t)) {
-      const owners = started.filter(x => (x.role === "arch" && x.sid === p.by) || (x.role === "aud" && x.proposal === p.id));
-      owners.forEach(x => used.add(x));
-      items.push({t: p.t, html: `<li><div class="tn"><div class="hd"><span class="id">proposal</span><span class="nm">${p.id}</span><span class="st">under review</span></div>
-        <div class="tx">slots ${esc(p.slots.join(" · "))}</div></div><ul>${owners.map(x => leaf(x, t)).join("")}</ul></li>`});
+    for (const p of LT.proposals) if (p.t != null && p.t <= t && !(p.variant && LT.variants.find(v => v.id === p.variant)?.t <= t)) {
+      const rej = p.status === "rejected" && p.decided != null && p.decided <= t;
+      items.push({t: p.t, n: {line: {cls: "prop" + (rej ? " rej" : ""), html: `<b>proposal ${p.id}</b>  <span class="muted">${esc(p.slots.join(" · "))}</span>  ${rej ? `<span class="badc">rejected ${fmt(p.decided)}</span> <span class="muted">— ${esc(short(p.reason, 150))}</span>` : '<span class="muted">under review</span>'}`},
+        kids: owners(p).map(x => ({line: sline(x, t)}))}});
     }
     items.sort((a, b) => a.t - b.t);
     const idle = started.filter(x => x.role !== "improve" && !used.has(x));
-    if (idle.length) items.push({t: 1e9, html: `<li><div class="tn"><div class="hd"><span class="id">architects</span><span class="nm">ARCH / AUD sessions without an accepted or rejected proposal</span>
-      <span class="st">${idle.length}</span></div><div class="tx">cut off by the time limit or a restart before they proposed, or still working</div></div><ul>${idle.map(x => leaf(x, t)).join("")}</ul></li>`});
-    document.getElementById("ltree").innerHTML = `<li><div class="tn"><div class="hd"><span class="id">task</span><span class="nm">christmas-tree-ahc041 · deliverable app/</span>
-      <span class="st">${champ ? `champion: ${champ.variant} ${champ.commit} · promote g ${champ.pm.toFixed(4)}` : "measuring the starter"}</span></div></div>
-      <ul>${items.map(i => i.html).join("")}</ul></li>`;
-    const sub = started.flatMap(x => x.subs).filter(u => u.t <= t);
-    document.getElementById("lt-status").textContent = `${live.length} sessions live · ${started.length} started · ${sub.filter(u => u.stage === "promote").length} promote decisions · ${sub.filter(u => u.stage === "landed").length} landed`;
+    const all = items.map(i => i.n);
+    if (idle.length) all.push({line: {cls: "var", html: `<b>ARCH / AUD sessions without a proposal</b>  <span class="muted">cut off by time or a restart before proposing, or still working</span>`}, kids: sessionsNode(idle, t)});
+    return {line: {cls: "root", html: `<b>task christmas-tree-ahc041</b>  <span class="muted">deliverable app/</span>  ${champ ? `<span class="champc">champion ${champ.variant} ${champ.commit} · promote g ${champ.pm.toFixed(4)}</span>` : '<span class="muted">measuring the starter</span>'}`}, kids: all};
+  }
+  const flat = (n, pre, last, isRoot, out) => {
+    out.push(`<div class="tl ${n.line.cls}"><span class="tp">${isRoot ? "" : pre + (last ? "└─ " : "├─ ")}</span><span class="tc">${n.line.html}</span></div>`);
+    const kids = n.kids || [], np = isRoot ? "" : pre + (last ? "   " : "│  ");
+    kids.forEach((k, i) => flat(k, np, i === kids.length - 1, false, out));
+    return out;
+  };
+  function render(t) {
+    document.getElementById("lt-time").textContent = fmt(t) + " UTC";
+    document.getElementById("ltree").innerHTML = flat(nodes(t), "", true, true, []).join("");
+    const started = LT.sessions.filter(x => x.t0 <= t), sub = started.flatMap(x => x.subs).filter(u => u.t <= t);
+    document.getElementById("lt-status").textContent = `${started.filter(x => t < x.t1).length} sessions live · ${started.length} started · ${sub.filter(u => u.stage === "promote").length} promote decisions · ${sub.filter(u => u.stage === "landed").length} landed`;
   }
   const slider = document.getElementById("lt-slider"), play = document.getElementById("lt-play"), speed = document.getElementById("lt-speed");
   slider.max = T1; slider.value = T1;
   let timer = null, last = 0, acc = 0;
   const stop = () => { if (timer) cancelAnimationFrame(timer); timer = null; play.innerHTML = "&#9654; Play"; };
   const step = ts => { const dt = (ts - last) / 1000; last = ts; const v = Math.min(T1, +slider.value + dt * +speed.value); slider.value = v;
-    acc += dt; if (acc > 0.2) { acc = 0; render(v); } if (v >= T1) { render(v); return stop(); } timer = requestAnimationFrame(step); };
+    acc += dt; if (acc > 0.15) { acc = 0; render(v); } if (v >= T1) { render(v); return stop(); } timer = requestAnimationFrame(step); };
   play.addEventListener("click", () => { if (timer) return stop(); if (+slider.value >= T1) slider.value = 300; play.innerHTML = "&#10074;&#10074; Pause"; last = performance.now(); timer = requestAnimationFrame(step); });
   slider.addEventListener("input", () => render(+slider.value));
   render(T1);
