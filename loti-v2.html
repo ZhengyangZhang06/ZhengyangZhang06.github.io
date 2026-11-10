@@ -139,7 +139,7 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
 .k3c{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#c98500;--s5:#e87ba4}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .k3c{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181}}
 :root[data-theme="dark"] .k3c{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181}
-.k3c #k3-chart{overflow-x:auto}.k3c svg{width:100%;min-width:640px;height:auto;display:block;font:11.5px var(--sans);fill:var(--muted)}
+.k3c .k3ch{overflow-x:auto}.k3c svg{width:100%;min-width:640px;height:auto;display:block;font:11.5px var(--sans);fill:var(--muted)}
 .k3c .gl{stroke:var(--grid)}.k3c .ax{stroke:var(--line)}.k3c .k50{stroke:var(--ink2);stroke-dasharray:2 3}
 .k3c .fut{fill:var(--grid);opacity:.55}.k3c .ln{fill:none;stroke-width:2;stroke-linejoin:round}
 .k3c .pr{stroke-width:2;stroke-dasharray:5 4}.k3c .dot{stroke:var(--panel);stroke-width:2}
@@ -206,6 +206,21 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
   <p class="foot">Chips: <span class="chip improve">improve</span> works on that slot; <span class="chip arch">arch</span>
   proposes a variant; <span class="chip aud">aud</span> reviews one. The controller restarted four times during the run
   (to install fixes); sessions cut off by a restart end there.</p>
+
+  <h3 style="margin-top:22px">Official score on the hidden set over time</h3>
+  <p>The same tree's champion, judged on Christmas tree cutting's 45 <strong>hidden</strong> instances with TCSExam's
+  own scorer (Kimi-K3-relative, 50 = Kimi K3's own result). A champion holds until the next one replaces it. Dashed
+  at the right edge: DeepSeek V4.1 Flash (1017) in the paper, one 12-hour session. Grey: time not yet run.</p>
+  <div class="panel k3c" style="position:relative">
+    <div class="k3leg" id="k3x-leg"></div>
+    <div class="k3ch" id="k3x-chart"></div>
+    <div class="k3tip" id="k3x-tip" hidden></div>
+    <p class="foot" id="k3x-note" style="margin-top:6px"></p>
+  </div>
+  <div class="scroll"><table class="tbl" id="k3x-table">
+    <thead><tr><th>task</th><th>champion since (UTC)</th><th>commit</th><th class="num">K3-relative</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
 </section>
 
 <section id="tree-section">
@@ -273,7 +288,7 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
   12-hour session. Grey area: the part of the 12-hour run that has not happened yet.</p>
   <div class="panel k3c" style="position:relative">
     <div class="k3leg" id="k3-leg"></div>
-    <div id="k3-chart"></div>
+    <div class="k3ch" id="k3-chart"></div>
     <div class="k3tip" id="k3-tip" hidden></div>
     <p class="foot" id="k3-note" style="margin-top:6px"></p>
   </div>
@@ -285,6 +300,7 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
 <script>
 (async () => {
   let D; try { D = await (await fetch("assets/loti-k3-curve.json", {cache: "no-store"})).json(); } catch (e) { return; }
+  function draw(P, tasks) {
   const m = h => { const [a, b] = h.split(":").map(Number); return a * 60 + b; };
   const W = 900, H = 340, L = 40, R = 118, T = 14, B = 30, x0 = m("05:00"), x1 = m(D.end), now = Math.min(m(D.now), x1);
   const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - v / 100) * (H - T - B);
@@ -298,7 +314,7 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
   s += `<text x="${W - R + 8}" y="${T + 11}">paper</text><text x="${W - R + 8}" y="${T + 25}">DeepSeek</text>`;
   s += `<text x="${X(now)}" y="${T + 11}" text-anchor="middle" style="fill:var(--ink2)">now ${D.now}</text>`;
   const hits = [];
-  D.tasks.forEach((tk, i) => {
+  tasks.forEach((tk, i) => {
     // paper reference: short dashed segment in the right margin
     s += `<line class="pr" style="stroke:${col(i)}" x1="${W - R + 8}" x2="${W - R + 30}" y1="${Y(tk.paper)}" y2="${Y(tk.paper)}"><title>${tk.name}: paper DeepSeek 1017 ${tk.paper}</title></line>`;
     const known = tk.points.filter(p => p.k3 != null);
@@ -318,17 +334,17 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
       hits.push({x, y: Y(p.k3), tk, p, i});
     }
   });
-  s += `<rect id="k3-hit" x="${L}" y="${T}" width="${W - R - L}" height="${H - T - B}" fill="transparent"/>`;
-  const el = document.getElementById("k3-chart"); el.innerHTML = s + "</svg>";
+  s += `<rect x="${L}" y="${T}" width="${W - R - L}" height="${H - T - B}" fill="transparent"/>`;
+  const el = document.getElementById(P + "-chart"); el.innerHTML = s + "</svg>";
   const last = tk => tk.points.filter(p => p.k3 != null).pop();
-  document.getElementById("k3-leg").innerHTML = D.tasks.map((tk, i) => { const l = last(tk);
+  document.getElementById(P + "-leg").innerHTML = tasks.map((tk, i) => { const l = last(tk);
     return `<span><i style="background:${col(i)}"></i>${tk.name} <b>${l ? l.k3.toFixed(1) : "—"}</b> <span class="muted">/ paper ${tk.paper}</span></span>`; }).join("");
-  const pend = D.tasks.reduce((a, tk) => a + tk.points.filter(p => p.k3 == null).length, 0);
-  document.getElementById("k3-note").textContent = (pend ? `Hollow markers: ${pend} champion changes whose hidden-set judging is still running. ` : "") +
-    `Treewidth heuristic: its hidden set is 100 instances of 30 minutes each, so its champions are judged only now and then.`;
-  document.querySelector("#k3-table tbody").innerHTML = D.tasks.flatMap(tk => tk.points.map(p =>
+  const pend = tasks.reduce((a, tk) => a + tk.points.filter(p => p.k3 == null).length, 0);
+  document.getElementById(P + "-note").textContent = (pend ? `Hollow markers: ${pend} champion changes whose hidden-set judging is still running. ` : "") +
+    (tasks.some(t => t.id === "tw-heuristic") ? `Treewidth heuristic: its hidden set is 100 instances of 30 minutes each, so its champions are judged only now and then.` : "");
+  document.querySelector("#" + P + "-table tbody").innerHTML = tasks.flatMap(tk => tk.points.map(p =>
     `<tr><td>${tk.name}</td><td class="mono">${p.t}</td><td class="mono">${p.commit}</td><td class="num">${p.k3 == null ? "judging…" : p.k3.toFixed(1)}</td></tr>`)).join("");
-  const svg = el.querySelector("svg"), tip = document.getElementById("k3-tip");
+  const svg = el.querySelector("svg"), tip = document.getElementById(P + "-tip");
   svg.addEventListener("pointermove", ev => {
     const r = svg.getBoundingClientRect(), k = W / r.width, px = (ev.clientX - r.left) * k, py = (ev.clientY - r.top) * k;
     let best = null, bd = 1e9;
@@ -341,6 +357,9 @@ details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
     tip.style.left = lx + "px"; tip.style.top = (best.y / k + r.top - pr.top - 10) + "px";
   });
   svg.addEventListener("pointerleave", () => tip.hidden = true);
+  }
+  draw("k3", D.tasks);
+  draw("k3x", D.tasks.filter(t => t.id === "christmas-tree-ahc041"));
 })();
 </script>
 
