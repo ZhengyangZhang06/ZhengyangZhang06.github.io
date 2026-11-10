@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOT-I Improvement Tree</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+*{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1b1f27; --ink2:#4a5160; --muted:#7b8292; --line:#dde1e8; --grid:#eceff3;
+  --tree:#3d55c4; --tree-soft:#e8ecfb; --worker:#0d7f6f; --worker-soft:#e2f4f0; --git:#5b616e; --git-soft:#eef0f3;
+  --ok:#1f7a3a; --warn:#a2610c; --bad:#b3261e;
+  --sans:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d; --grid:#242a33;
+  --tree:#8399f2; --tree-soft:#222a45; --worker:#43c2ad; --worker-soft:#16332e; --git:#a3a9b5; --git-soft:#252a32;
+  --ok:#5cc47a; --warn:#e0a24a; --bad:#f08a80; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d; --grid:#242a33;
+  --tree:#8399f2; --tree-soft:#222a45; --worker:#43c2ad; --worker-soft:#16332e; --git:#a3a9b5; --git-soft:#252a32;
+  --ok:#5cc47a; --warn:#e0a24a; --bad:#f08a80; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.65 var(--sans)}
+.wrap{max-width:980px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:56px}
+h1{font-size:30px;line-height:1.25;margin:0;font-weight:600;text-wrap:balance}
+h2{font-size:21px;margin:0;font-weight:600;text-wrap:balance}
+h3{font-size:15px;margin:0;font-weight:600}
+p{margin:0;max-width:72ch}
+a{color:var(--tree)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+header{display:flex;flex-direction:column;gap:12px}
+header .lede{color:var(--ink2);font-size:16px}
+section{display:flex;flex-direction:column;gap:18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px}
+.muted{color:var(--muted)}.ink2{color:var(--ink2)}
+.t{color:var(--tree);font-weight:600}.w{color:var(--worker);font-weight:600}
+ul{margin:0;padding-left:1.2em;max-width:72ch}li{margin:.2em 0}
+/* architecture diagram */
+.arch{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:14px;align-items:stretch}
+.arch .col{display:flex;flex-direction:column;gap:10px}
+.box{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--panel)}
+.box h3{margin-bottom:4px}
+.box.s{border-color:var(--worker);background:var(--worker-soft)}
+.box.c{border-color:var(--tree);background:var(--tree-soft)}
+.box.g{border-color:var(--git);background:var(--git-soft)}
+.box p,.box li{font-size:13.5px;color:var(--ink2)}
+.tier{display:flex;gap:8px;align-items:baseline;font-size:13.5px}
+.tier b{font-family:var(--mono);font-size:12px;min-width:68px;color:var(--tree)}
+@media (max-width:760px){.arch{grid-template-columns:1fr}}
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl th{font-weight:500;color:var(--muted);text-align:left;border-bottom:1px solid var(--line);padding:6px 8px;white-space:nowrap}
+.tbl td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+.tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12.5px}
+.scroll{overflow-x:auto}
+.pill{display:inline-block;font:500 11.5px/1.6 var(--mono);padding:0 7px;border-radius:999px;border:1px solid var(--line);color:var(--ink2);white-space:nowrap}
+.pill.ok{color:var(--ok);border-color:var(--ok)}.pill.bad{color:var(--bad);border-color:var(--bad)}.pill.warn{color:var(--warn);border-color:var(--warn)}
+/* charts */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.charts{grid-template-columns:1fr}}
+.chart h3{margin-bottom:2px}.chart .sub{font-size:12.5px;color:var(--muted);margin-bottom:6px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font:11px var(--mono);fill:var(--muted)}
+svg .gridl{stroke:var(--grid);stroke-width:1}
+svg .axis{stroke:var(--line);stroke-width:1}
+svg .ln{fill:none;stroke:var(--tree);stroke-width:2;stroke-linejoin:round}
+svg .ln2{fill:none;stroke:var(--worker);stroke-width:2;stroke-linejoin:round}
+svg .pt{fill:var(--tree);stroke:var(--panel);stroke-width:2}
+svg .pt2{fill:var(--worker);stroke:var(--panel);stroke-width:2}
+svg .ref{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 4}
+svg .hit{fill:transparent;cursor:default}
+svg .lab{fill:var(--ink2)}
+details{font-size:13.5px}details summary{cursor:pointer;color:var(--muted)}
+.foot{font-size:13px;color:var(--muted)}
+
+.replay{display:flex;flex-direction:column;gap:12px}
+.rp-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.rp-controls button{font:500 13px var(--sans);padding:5px 12px;border-radius:6px;border:1px solid var(--tree);background:var(--tree-soft);color:var(--ink);cursor:pointer}
+.rp-controls select{font:13px var(--sans);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px}
+#rp-slider{flex:1;min-width:180px;accent-color:var(--tree)}
+#rp-time{font-size:15px;font-weight:500;color:var(--ink)}
+.rp-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px}
+@media (max-width:760px){.rp-grid{grid-template-columns:1fr}}
+.rp-var{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px}
+.rp-var.champ{border-color:var(--tree);box-shadow:0 0 0 1px var(--tree) inset}
+.rp-var h4{margin:0 0 4px;font:600 13px var(--sans);display:flex;justify-content:space-between;gap:8px}
+.rp-row{display:flex;gap:8px;align-items:center;min-height:26px;font-size:12.5px;border-top:1px dashed var(--line);padding-top:3px;flex-wrap:wrap}
+.rp-var .rp-row:first-of-type{border-top:0}
+.rp-label{font-family:var(--mono);font-size:12px;color:var(--ink2);min-width:118px}
+.rp-acc{font-family:var(--mono);font-size:11.5px;color:var(--ok);min-width:64px}
+.chip{display:inline-block;font:500 11px/1.7 var(--mono);padding:0 6px;border-radius:999px;border:1px solid}
+.chip.improve{color:var(--worker);border-color:var(--worker);background:var(--worker-soft)}
+.chip.arch{color:var(--tree);border-color:var(--tree);background:var(--tree-soft)}
+.chip.aud{color:var(--warn);border-color:var(--warn)}
+.rp-champ{font-size:13.5px;margin:6px 0}
+.rp-champ b{font-family:var(--mono)}
+.rp-kpis{display:flex;gap:16px;margin-top:6px}.rp-kpis div{display:flex;flex-direction:column;font-size:12px}.rp-kpis b{font:500 20px var(--mono)}
+.rp-feed{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto;font-size:13px;border-top:1px solid var(--line)}
+.rp-feed li{display:flex;gap:10px;padding:4px 2px;border-bottom:1px solid var(--line)}
+.rp-feed .tm{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:42px}
+.rp-feed .ok{color:var(--ok)}.rp-feed .bad{color:var(--bad)}.rp-feed .op{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">LOT-I v2 · informal option tree · 2026-11-10</div>
+  <h1>An improvement tree: how many agent sessions build one solver together</h1>
+  <p class="lede">LOT proves a frozen Lean statement by splitting it into lemmas that many sessions prove in parallel.
+  LOT-I v2 runs the same kind of collaboration on tasks with <em>no formal statement</em> &mdash; here,
+  heuristic solvers from <a href="https://arxiv.org/abs/2611.07962">TCSExam</a> that are scored on hidden instances.
+  This page walks through one real tree, the AHC041 &ldquo;Christmas tree cutting&rdquo; task, run on DeepSeek
+  V4.1 Flash (1017) for every role.</p>
+</header>
+
+
+<section id="replay">
+  <h2>Replay: the Christmas-tree tree, 05:00&ndash;10:10 UTC</h2>
+  <p>Every event below is from the tree's own log. Press play or drag the time slider: the left panel shows the
+  variants and their slots with the sessions working on each, the right panel the champion and the official
+  hidden-set score, and the feed the controller's decisions as they happen.</p>
+  <div class="panel replay">
+    <div class="rp-controls">
+      <button id="rp-play" type="button">&#9654; Play</button>
+      <label class="muted">speed <select id="rp-speed"><option value="2">2 min/s</option><option value="5" selected>5 min/s</option><option value="15">15 min/s</option></select></label>
+      <input id="rp-slider" type="range" min="300" max="610" step="0.5" value="300" aria-label="time">
+      <span id="rp-time" class="mono">05:00</span>
+    </div>
+    <div class="rp-grid">
+      <div>
+        <h3>Variants, slots and live sessions</h3>
+        <div id="rp-variants"></div>
+        <div class="rp-row"><span class="rp-label">architects &amp; reviewers</span><span id="rp-arch"></span></div>
+      </div>
+      <div>
+        <h3>Champion</h3>
+        <div id="rp-champ" class="rp-champ"></div>
+        <div id="rp-mini"></div>
+        <div class="rp-kpis"><div><span class="muted">gate decisions</span><b id="rp-gates">0</b></div><div><span class="muted">accepted</span><b id="rp-acc">0</b></div><div><span class="muted">sessions started</span><b id="rp-sess">0</b></div></div>
+      </div>
+    </div>
+    <h3 style="margin-top:14px">Feed</h3>
+    <ol id="rp-feed" class="rp-feed"></ol>
+  </div>
+  <p class="foot">Chips: <span class="chip improve">improve</span> works on that slot; <span class="chip arch">arch</span>
+  proposes a variant; <span class="chip aud">aud</span> reviews one. The controller restarted four times during the run
+  (to install fixes); sessions cut off by a restart end there.</p>
+</section>
+
+<section>
+  <h2>1. Why a proof tree does not fit an optimization task</h2>
+  <p>In LOT, a split closes its parent only when <em>every</em> child is proved (an AND), and the root closes
+  once. A first version of LOT-I copied that onto solver tasks: a split into components, each with its own test,
+  and the root &ldquo;solved&rdquo; at its first acceptance. On five TCSExam solver tasks every root was closed by a
+  direct implementation within an hour and no decomposition ever counted: components passed their own tests
+  without the whole getting better, the glue had to wait for all siblings, and once the root closed the tree was
+  just sessions editing one file.</p>
+  <p>LOT-I v2 keeps LOT's discipline &mdash; frozen interfaces, a trusted checker that alone decides, sessions on
+  their own git branches, a controller that alone writes the integration branch, independent reviews &mdash; but
+  replaces &ldquo;prove once&rdquo; by <strong>improve monotonically, measured in context</strong>.</p>
+</section>
+
+<section>
+  <h2>2. Who does what</h2>
+  <div class="arch">
+    <div class="col">
+      <div class="box s"><h3>IMPROVE sessions</h3><p>Each owns <em>one slot</em> of one variant and one idea
+      from that slot's list. It edits only the slot's files, measures with <code>loti eval</code>, and
+      <code>loti submit</code>s small gains. It sees a per-instance scoreboard (including the gap to the best known
+      value) and the notes of earlier sessions.</p></div>
+      <div class="box s"><h3>ARCH sessions</h3><p>Propose a new <em>variant</em>: a glue plus slots, each slot with a
+      stub, a frozen interface spec, an optional unit test and 3&ndash;6 ideas. The root never closes, so this can
+      happen at any time.</p></div>
+      <div class="box s"><h3>AUD sessions</h3><p>Review a proposed variant before it opens: are the slots real,
+      separable parts? are the stubs honest, the tests meaningful, the time budget not hard-coded?</p></div>
+    </div>
+    <div class="col">
+      <div class="box c"><h3>Controller (trusted)</h3><p>The only process that writes the integration branches. A
+      candidate = the variant's current best with <strong>only the submitting slot's files replaced</strong>; it is
+      judged through the task's own scorer, never in the session's sandbox.</p></div>
+      <div class="box c"><h3>Evaluation queue (own CPUs)</h3>
+        <div class="tier"><b>screen</b><span>5 instances: no new failures, not clearly worse</span></div>
+        <div class="tier"><b>promote</b><span>16&ndash;30 instances, paired with the incumbent instance by instance:
+        mean gain, more wins than losses, sign test</span></div>
+        <div class="tier"><b>hold-out</b><span>instances no session ever sees + a few at a long limit: a new
+        champion must not regress, else it is rolled back</span></div>
+        <div class="tier"><b>margin</b><span>on 2-second tasks, a run over 85% of the limit counts as a failure</span></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="box g"><h3>Variants &amp; slots</h3><p>Each variant (architecture) has its own best commit
+      <code>v/&lt;id&gt;</code>. An accepted slot change lands at once &mdash; no slot waits for its siblings.</p></div>
+      <div class="box g"><h3>Champion</h3><p>The best variant's best commit, on <code>lib</code>: the deliverable at
+      every moment. It moves only through the promote gate <em>and</em> the hold-out check.</p></div>
+      <div class="box g"><h3>Sandbox</h3><p>Each session runs in a private root: its desk, its home, the tree's
+      repository read-only, the public instances read-only at <code>/app/instances</code>. The hidden instances, the
+      hold-out set and the judge do not exist inside; network only to the model API.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>3. A worked example: Christmas tree cutting</h2>
+  <p><strong>The task</strong> (AtCoder AHC041, as a TCSExam solver task): a planar graph of 1000 vertices with
+  weights; assign every vertex a level 0&ndash;10 so that each vertex above level 0 has a neighbour one level lower,
+  and maximize &Sigma; (level+1)&middot;weight. One core, <strong>2 seconds per instance</strong>; the final score is
+  the Kimi-K3-relative score on 45 hidden instances (50 = Kimi K3's own result).</p>
+  <div class="panel">
+    <h3>The tree after 5 hours</h3>
+    <ul>
+      <li><strong>48 sessions</strong>: 35 IMPROVE, 9 ARCH, 4 AUD &mdash; three IMPROVE and one ARCH running at a time
+      on one CPU core, evaluation on a second core.</li>
+      <li><strong>59 gate decisions</strong>: screen 28 passed / 3 rejected; promote <strong>8 accepted / 20
+      rejected</strong> (97 evaluations in total).</li>
+      <li><strong>3 live variants</strong>: v0 (the starter, one slot = the whole solver), v1 and v2 (proposed by ARCH
+      sessions, approved by AUD); 2 further proposals rejected.</li>
+    </ul>
+  </div>
+
+  <h3>3.1 Phase one: the champion climbs (v0, one slot)</h3>
+  <p>Every accepted step below won on (nearly) every one of the 30 promote instances against the then champion and
+  was confirmed on the hold-out set before becoming champion.</p>
+  <div class="scroll"><table class="tbl" id="champ-table">
+    <thead><tr><th>time (UTC)</th><th>what was accepted</th><th class="num">gain</th><th class="num">wins / losses</th><th class="num">promote mean g</th><th class="num">hold-out mean g</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <p class="muted" style="font-size:13px">g normalizes each instance between the shipped baseline (0) and the best
+  known value (1; here the public AHC041 top submissions, re-run by TCSExam).</p>
+
+  <h3>3.2 The official score exposed a blind spot &mdash; and the gates were fixed</h3>
+  <p>The tree's g kept rising, but the hidden-set score did not: at 06:32 the champion scored <strong>40.0</strong>
+  with <strong>5 of 45 hidden instances at 0</strong>. The solver ran to 1.7&ndash;2.0 s of its 2-second limit; on the
+  public instances it happened to finish, on the judge it was sometimes killed. Two changes followed, without
+  restarting the work: (1) the <strong>finish margin</strong> &mdash; any run over 85% of the limit is a failure in
+  every gate, so the risky champion now shows failures and any safe solver beats it (the 07:14 step, &ldquo;+1.999&rdquo;,
+  is a safe solver replacing it); (2) the scoreboard shows each instance's <strong>gap to the best known value in
+  %</strong>, because the official score compares with solvers within ~1% of it, where g has no resolution left.</p>
+  <div class="charts">
+    <div class="panel chart"><h3>Champion quality inside the tree</h3><div class="sub">promote-tier mean g of each champion (0 = baseline, 1 = best known)</div><div id="c1"></div></div>
+    <div class="panel chart"><h3>Official score on the hidden set</h3><div class="sub">Kimi-K3-relative score of the champion at that time; dashed: DeepSeek 1017 in the paper (66.8)</div><div id="c2"></div></div>
+  </div>
+  <div class="scroll"><table class="tbl" id="hidden-table">
+    <thead><tr><th>judged (UTC)</th><th>champion</th><th class="num">K3-relative</th><th class="num">instances at 0</th><th>note</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+
+  <h3>3.3 Phase two: architectures</h3>
+  <p>Once the single-slot champion plateaued near the best known values, ARCH sessions proposed decompositions of
+  <em>that</em> champion. A proposal must run end to end with stubs (the champion's own code is a valid stub) and
+  stay within 0.15 of the champion; then an AUD session reviews it.</p>
+  <div class="scroll"><table class="tbl" id="arch-table">
+    <thead><tr><th>proposal</th><th>slots</th><th class="num">stub mean vs champion</th><th>outcome</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <p>Each slot carries ideas that are handed to different IMPROVE sessions, for example:</p>
+  <ul id="ideas"></ul>
+  <p class="ink2">A variant's slots improve independently: an accepted <code>v1.search</code> change lands in v1 at
+  once and is measured with v1's current <code>construct</code>, <code>lns</code> and <code>skeleton</code>. When v1's
+  best beats the champion by the promote gate and holds on the hold-out set, v1 becomes the champion.</p>
+</section>
+
+<section>
+  <h2>4. Where the five hard tasks stand</h2>
+  <p>Interim official scores (hidden instances, Kimi-K3-relative) of each tree's champion at the time shown,
+  next to the paper's single-session DeepSeek V4.1 Flash (1017) result after 12 hours.</p>
+  <div class="scroll"><table class="tbl" id="tasks-table">
+    <thead><tr><th>task</th><th class="num">LOT-I v2</th><th>judged at</th><th class="num">paper, DeepSeek 1017</th><th>state of the tree</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <p class="foot">The trees run 12 hours (until about 17:00 UTC); these are snapshots. Glass cutting lost its first
+  3.5 hours to an evaluation-queue bug (new screens always went before slow promotes) that is now fixed.</p>
+</section>
+
+<section>
+  <h2>5. What the run taught the workflow</h2>
+  <ul>
+    <li><strong>Gate on the judge's terms.</strong> A proxy that passes solvers at 99% of the time limit is wrong on
+    another machine: short-limit tasks need a finish margin.</li>
+    <li><strong>Show the gap that the final score sees.</strong> Normalized scores saturate near the best known value;
+    sessions need the per-instance gap in %.</li>
+    <li><strong>Never starve the slow stages.</strong> With 15&ndash;30-minute evaluations, a priority queue let
+    screens starve promotes and promotes starve champion checks; all stages of a submission now share one FIFO
+    priority and champion checks go first.</li>
+    <li><strong>Decomposition comes after a strong baseline.</strong> In this tree the useful architectures were
+    proposed only once a single-slot champion existed to decompose; the stubs <em>are</em> the champion, so a
+    variant starts at full strength and every slot gain is a real gain.</li>
+  </ul>
+  <p class="foot">Code: branch <code>zhengyang-lot-informal</code> of the LOT repository (<code>informal/</code>).
+  Benchmark: <a href="https://github.com/MoonshotAI/TCSExam">MoonshotAI/TCSExam</a>. Related:
+  <a href="lot-git-workers.html">LOT git workers</a>.</p>
+</section>
+
+</div>
+<script>
+const REPLAY = {"events":[{"t":303.75,"k":"tree-start"},{"t":303.83,"k":"champion","variant":"v0","commit":"3dff33c","pm":0.0,"hm":0.0},{"t":303.95,"k":"start","sid":"ad68e89c","role":"arch","slot":null,"idea":"","resumed":false},{"t":303.97,"k":"start","sid":"ca8a574d","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":303.98,"k":"start","sid":"d9628bd9","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":304.02,"k":"start","sid":"16b37d83","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":338.15,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"16b37d83","w":5,"l":0,"d":0.7739,"why":"screen passed"},{"t":338.6,"k":"gate","stage":"promote","ok":true,"slot":"v0.app","sid":"16b37d83","w":30,"l":0,"d":0.7799,"why":"promote: +0.7799 mean, 30 wins / 0 losses / 0 ties"},{"t":338.6,"k":"accepted","variant":"v0","slot":"v0.app","sid":"16b37d83","d":0.7799},{"t":338.9,"k":"holdout","regressed":false,"why":"hold-out ok: 0.7754 vs 0.0000 (15/0/0)"},{"t":338.92,"k":"champion","variant":"v0","commit":"659a084","pm":0.7799,"hm":0.7754},{"t":341.67,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"ca8a574d","w":5,"l":0,"d":0.1313,"why":"screen passed"},{"t":342.22,"k":"gate","stage":"promote","ok":true,"slot":"v0.app","sid":"ca8a574d","w":30,"l":0,"d":0.1249,"why":"promote: +0.1249 mean, 30 wins / 0 losses / 0 ties"},{"t":342.23,"k":"accepted","variant":"v0","slot":"v0.app","sid":"ca8a574d","d":0.1249},{"t":342.6,"k":"holdout","regressed":false,"why":"hold-out ok: 0.8991 vs 0.7754 (15/0/0)"},{"t":342.62,"k":"champion","variant":"v0","commit":"c1d227b","pm":0.9048,"hm":0.8991},{"t":343.13,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"d9628bd9","w":5,"l":0,"d":0.0638,"why":"screen passed"},{"t":343.28,"k":"gate","stage":"promote","ok":true,"slot":"v0.app","sid":"d9628bd9","w":30,"l":0,"d":0.0626,"why":"promote: +0.0627 mean, 30 wins / 0 losses / 0 ties"},{"t":343.3,"k":"accepted","variant":"v0","slot":"v0.app","sid":"d9628bd9","d":0.0626},{"t":343.45,"k":"holdout","regressed":false,"why":"hold-out ok: 0.9665 vs 0.8991 (15/0/0)"},{"t":343.45,"k":"champion","variant":"v0","commit":"70b02c7","pm":0.9675,"hm":0.9665},{"t":349.15,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"16b37d83","w":5,"l":0,"d":0.0153,"why":"screen passed"},{"t":349.6,"k":"gate","stage":"promote","ok":true,"slot":"v0.app","sid":"16b37d83","w":30,"l":0,"d":0.0176,"why":"promote: +0.0176 mean, 30 wins / 0 losses / 0 ties"},{"t":349.6,"k":"accepted","variant":"v0","slot":"v0.app","sid":"16b37d83","d":0.0176},{"t":349.92,"k":"holdout","regressed":false,"why":"hold-out ok: 0.9845 vs 0.9665 (15/0/0)"},{"t":349.92,"k":"champion","variant":"v0","commit":"0406f12","pm":0.9851,"hm":0.9845},{"t":350.23,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"16b37d83","w":0,"l":0,"d":0.0,"why":"screen passed"},{"t":350.27,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"16b37d83","w":0,"l":0,"d":0.0,"why":"promote: mean gain +0.0000 is not above 0.002"},{"t":356.67,"k":"end","sid":"ca8a574d"},{"t":356.92,"k":"start","sid":"85830231","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":357.97,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"16b37d83","w":1,"l":4,"d":-0.0027,"why":"screen passed"},{"t":358.43,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"16b37d83","w":6,"l":24,"d":-0.0029,"why":"promote: mean gain -0.0029 is not above 0.002"},{"t":359.18,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"d9628bd9","w":0,"l":5,"d":-0.0083,"why":"screen passed"},{"t":359.7,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"d9628bd9","w":0,"l":30,"d":-0.01,"why":"promote: mean gain -0.0099 is not above 0.002"},{"t":360.37,"k":"end","sid":"16b37d83"},{"t":360.7,"k":"start","sid":"68c5caf5","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":363.55,"k":"proposed","p":"p001","slots":["construct","anneal","lns","skeleton"],"mean":0.9689},{"t":363.58,"k":"start","sid":"6db12755","role":"aud","slot":null,"idea":"","resumed":false},{"t":370.38,"k":"end","sid":"ad68e89c"},{"t":370.42,"k":"start","sid":"321b8ebe","role":"arch","slot":null,"idea":"","resumed":false},{"t":372.33,"k":"rejected","p":"p001"},{"t":372.67,"k":"end","sid":"6db12755"},{"t":378.9,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"d9628bd9","w":4,"l":1,"d":0.0028,"why":"screen passed"},{"t":379.03,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"85830231","w":3,"l":2,"d":0.0006,"why":"screen passed"},{"t":379.55,"k":"gate","stage":"promote","ok":true,"slot":"v0.app","sid":"d9628bd9","w":29,"l":1,"d":0.0025,"why":"promote: +0.0025 mean, 29 wins / 1 losses / 0 ties"},{"t":379.55,"k":"accepted","variant":"v0","slot":"v0.app","sid":"d9628bd9","d":0.0025},{"t":380.05,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"85830231","w":13,"l":17,"d":-0.0002,"why":"promote: mean gain -0.0002 is not above 0.002"},{"t":380.47,"k":"holdout","regressed":false,"why":"hold-out ok: 0.9869 vs 0.9845 (14/1/0)"},{"t":380.47,"k":"champion","variant":"v0","commit":"84e4c83","pm":0.9876,"hm":0.9869},{"t":382.55,"k":"end","sid":"d9628bd9"},{"t":382.58,"k":"start","sid":"7966227b","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":388.47,"k":"start","sid":"7966227b","role":"improve","slot":"v0.app","idea":"","resumed":true},{"t":388.68,"k":"start","sid":"7b0c1660","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":388.72,"k":"start","sid":"686085b6","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":397.88,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"7966227b","w":5,"l":0,"d":0.0083,"why":"screen passed"},{"t":398.47,"k":"gate","stage":"promote","ok":true,"slot":"v0.app","sid":"7966227b","w":29,"l":1,"d":0.0071,"why":"promote: +0.0071 mean, 29 wins / 1 losses / 0 ties"},{"t":398.48,"k":"accepted","variant":"v0","slot":"v0.app","sid":"7966227b","d":0.0071},{"t":398.98,"k":"holdout","regressed":false,"why":"hold-out ok: 0.9937 vs 0.9869 (15/0/0)"},{"t":398.98,"k":"champion","variant":"v0","commit":"6540d4d","pm":0.9947,"hm":0.9937},{"t":400.47,"k":"start","sid":"dca7ba47","role":"arch","slot":null,"idea":"","resumed":false},{"t":402.32,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"686085b6","w":2,"l":3,"d":-0.0004,"why":"screen passed"},{"t":402.93,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"686085b6","w":20,"l":10,"d":0.0004,"why":"promote: mean gain +0.0004 is not above 0.002"},{"t":403.33,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"686085b6","w":2,"l":3,"d":-0.0004,"why":"screen passed"},{"t":403.48,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"686085b6","w":20,"l":10,"d":0.0004,"why":"promote: mean gain +0.0004 is not above 0.002"},{"t":405.52,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"7966227b","w":2,"l":3,"d":-0.0008,"why":"screen passed"},{"t":406.13,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"7966227b","w":19,"l":11,"d":0.0007,"why":"promote: mean gain +0.0007 is not above 0.002"},{"t":406.28,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"7b0c1660","w":3,"l":2,"d":0.0006,"why":"screen passed"},{"t":406.9,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"7b0c1660","w":28,"l":2,"d":0.0019,"why":"promote: mean gain +0.0019 is not above 0.002"},{"t":413.05,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"7966227b","w":3,"l":2,"d":0.0005,"why":"screen passed"},{"t":413.6,"k":"gate","stage":"promote","ok":true,"slot":"v0.app","sid":"7966227b","w":29,"l":1,"d":0.0031,"why":"promote: +0.0031 mean, 29 wins / 1 losses / 0 ties"},{"t":413.62,"k":"accepted","variant":"v0","slot":"v0.app","sid":"7966227b","d":0.0031},{"t":414.52,"k":"holdout","regressed":false,"why":"hold-out ok: 0.9955 vs 0.9937 (13/2/0)"},{"t":414.52,"k":"champion","variant":"v0","commit":"a90a92a","pm":0.9978,"hm":0.9955},{"t":415.98,"k":"start","sid":"686085b6","role":"improve","slot":"v0.app","idea":"","resumed":true},{"t":416.15,"k":"start","sid":"65b6f1bc","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":416.23,"k":"start","sid":"ebb021e4","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":427.15,"k":"gate","stage":"screen","ok":false,"slot":"v0.app","sid":"686085b6","w":0,"l":0,"d":0.0,"why":"screen: the candidate fails on every screen instance"},{"t":430.48,"k":"start","sid":"7f7fe722","role":"arch","slot":null,"idea":"","resumed":false},{"t":434.08,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"686085b6","w":5,"l":0,"d":1.9971,"why":"screen passed"},{"t":434.57,"k":"gate","stage":"promote","ok":true,"slot":"v0.app","sid":"686085b6","w":30,"l":0,"d":1.9986,"why":"promote: +1.9986 mean, 30 wins / 0 losses / 0 ties"},{"t":434.58,"k":"accepted","variant":"v0","slot":"v0.app","sid":"686085b6","d":1.9986},{"t":434.95,"k":"holdout","regressed":false,"why":"hold-out ok: 0.9975 vs -1.0000 (15/0/0)"},{"t":434.95,"k":"champion","variant":"v0","commit":"4fa538b","pm":0.9986,"hm":0.9975},{"t":440.58,"k":"gate","stage":"screen","ok":false,"slot":"v0.app","sid":"ebb021e4","w":0,"l":5,"d":-1.9971,"why":"screen: the candidate fails on every screen instance"},{"t":441.03,"k":"gate","stage":"screen","ok":false,"slot":"v0.app","sid":"65b6f1bc","w":0,"l":5,"d":-1.9971,"why":"screen: the candidate fails on every screen instance"},{"t":443.05,"k":"end","sid":"65b6f1bc"},{"t":443.08,"k":"start","sid":"b2c70d90","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":444.17,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"ebb021e4","w":3,"l":2,"d":0.0005,"why":"screen passed"},{"t":444.7,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"ebb021e4","w":15,"l":15,"d":-0.0001,"why":"promote: mean gain -0.0001 is not above 0.002"},{"t":444.93,"k":"end","sid":"686085b6"},{"t":444.97,"k":"start","sid":"8da4248d","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":446.13,"k":"end","sid":"ebb021e4"},{"t":446.18,"k":"start","sid":"17696007","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":456.17,"k":"start","sid":"17696007","role":"improve","slot":"v0.app","idea":"","resumed":true},{"t":456.3,"k":"start","sid":"a3dc96a4","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":456.43,"k":"start","sid":"c446e96b","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":460.5,"k":"start","sid":"52e298b8","role":"arch","slot":null,"idea":"","resumed":false},{"t":460.52,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"17696007","w":2,"l":3,"d":0.0007,"why":"screen passed"},{"t":460.58,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"17696007","w":18,"l":12,"d":0.0003,"why":"promote: mean gain +0.0003 is not above 0.002"},{"t":461.78,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"17696007","w":2,"l":3,"d":0.0007,"why":"screen passed"},{"t":461.83,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"17696007","w":18,"l":12,"d":0.0003,"why":"promote: mean gain +0.0003 is not above 0.002"},{"t":466.92,"k":"end","sid":"17696007"},{"t":466.98,"k":"start","sid":"f7eabd37","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":472.15,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"c446e96b","w":2,"l":3,"d":0.0018,"why":"screen passed"},{"t":472.68,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"c446e96b","w":17,"l":13,"d":0.0008,"why":"promote: mean gain +0.0008 is not above 0.002"},{"t":480.93,"k":"end","sid":"a3dc96a4"},{"t":481.02,"k":"start","sid":"895a5bad","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":481.9,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"c446e96b","w":4,"l":1,"d":0.0023,"why":"screen passed"},{"t":482.02,"k":"end","sid":"f7eabd37"},{"t":482.12,"k":"start","sid":"db21bbbb","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":482.43,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"c446e96b","w":16,"l":14,"d":0.0001,"why":"promote: mean gain +0.0001 is not above 0.002"},{"t":483.45,"k":"end","sid":"c446e96b"},{"t":483.48,"k":"start","sid":"997ef3e9","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":488.45,"k":"proposed","p":"p002","slots":["construct","search","lns","skeleton"],"mean":0.9985},{"t":488.5,"k":"start","sid":"b7d2457d","role":"aud","slot":null,"idea":"","resumed":false},{"t":488.92,"k":"end","sid":"52e298b8"},{"t":490.6,"k":"start","sid":"0d2a3f2d","role":"arch","slot":null,"idea":"","resumed":false},{"t":494.12,"k":"end","sid":"895a5bad"},{"t":494.17,"k":"start","sid":"839a8d9d","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":497.58,"k":"variant","variant":"v1","p":"p002","slots":["v1.glue","v1.construct","v1.search","v1.lns","v1.skeleton"]},{"t":497.85,"k":"end","sid":"b7d2457d"},{"t":506.72,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"997ef3e9","w":5,"l":0,"d":0.0017,"why":"screen passed"},{"t":507.25,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"997ef3e9","w":25,"l":5,"d":0.0014,"why":"promote: mean gain +0.0014 is not above 0.002"},{"t":509.9,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"997ef3e9","w":4,"l":1,"d":0.0008,"why":"screen passed"},{"t":510.42,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"997ef3e9","w":19,"l":11,"d":0.0008,"why":"promote: mean gain +0.0008 is not above 0.002"},{"t":512.2,"k":"end","sid":"997ef3e9"},{"t":512.28,"k":"start","sid":"fc07d3dc","role":"improve","slot":"v1.glue","idea":"Adaptive schedule: measure score gained per second by construct+search vs lns vs skeleton in the current run and shift t","resumed":false},{"t":517.58,"k":"start","sid":"9f673e32","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":517.72,"k":"start","sid":"1cfa2fae","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":517.72,"k":"start","sid":"fc07d3dc","role":"improve","slot":"v1.glue","idea":"Adaptive schedule: measure score gained per second by construct+search vs lns vs skeleton in the current run and shift t","resumed":true},{"t":520.62,"k":"start","sid":"26a561c7","role":"arch","slot":null,"idea":"","resumed":false},{"t":533.95,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"9f673e32","w":2,"l":3,"d":0.0018,"why":"screen passed"},{"t":534.1,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"9f673e32","w":4,"l":1,"d":0.0028,"why":"screen passed"},{"t":534.12,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"1cfa2fae","w":5,"l":0,"d":0.0025,"why":"screen passed"},{"t":534.55,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"9f673e32","w":20,"l":10,"d":0.0016,"why":"promote: mean gain +0.0016 is not above 0.002"},{"t":535.0,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"9f673e32","w":19,"l":11,"d":0.0003,"why":"promote: mean gain +0.0003 is not above 0.002"},{"t":535.48,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"1cfa2fae","w":20,"l":10,"d":0.0015,"why":"promote: mean gain +0.0015 is not above 0.002"},{"t":542.67,"k":"proposed","p":"p003","slots":["kernel","policy","moves","bands"],"mean":0.9989},{"t":542.72,"k":"start","sid":"832086c7","role":"aud","slot":null,"idea":"","resumed":false},{"t":543.63,"k":"end","sid":"26a561c7"},{"t":547.9,"k":"end","sid":"9f673e32"},{"t":547.95,"k":"start","sid":"cbe3e53c","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":550.67,"k":"start","sid":"9a278baa","role":"arch","slot":null,"idea":"","resumed":false},{"t":551.57,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"1cfa2fae","w":3,"l":2,"d":0.0022,"why":"screen passed"},{"t":552.07,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"1cfa2fae","w":19,"l":11,"d":0.0012,"why":"promote: mean gain +0.0012 is not above 0.002"},{"t":552.23,"k":"end","sid":"fc07d3dc"},{"t":552.45,"k":"start","sid":"7558dd1d","role":"improve","slot":"v1.glue","idea":"Deadline tuning: the internal factor is 0.80 of the harness budget; try 0.82-0.83 and verify with the eval-reported seco","resumed":false},{"t":555.47,"k":"variant","variant":"v2","p":"p003","slots":["v2.glue","v2.kernel","v2.policy","v2.moves","v2.bands"]},{"t":556.0,"k":"end","sid":"832086c7"},{"t":571.7,"k":"proposed","p":"p004","slots":["mstart","anneal","cover","forest"],"mean":0.9989},{"t":571.75,"k":"start","sid":"f18af50d","role":"aud","slot":null,"idea":"","resumed":false},{"t":572.45,"k":"end","sid":"9a278baa"},{"t":575.27,"k":"gate","stage":"screen","ok":true,"slot":"v0.app","sid":"1cfa2fae","w":4,"l":1,"d":0.002,"why":"screen passed"},{"t":575.77,"k":"gate","stage":"promote","ok":false,"slot":"v0.app","sid":"1cfa2fae","w":21,"l":9,"d":0.001,"why":"promote: mean gain +0.0010 is not above 0.002"},{"t":577.47,"k":"end","sid":"1cfa2fae"},{"t":577.53,"k":"start","sid":"eba4d7d4","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":583.47,"k":"rejected","p":"p004"},{"t":583.62,"k":"start","sid":"53d72096","role":"arch","slot":null,"idea":"","resumed":false},{"t":583.78,"k":"end","sid":"f18af50d"},{"t":590.47,"k":"end","sid":"eba4d7d4"},{"t":590.53,"k":"start","sid":"862afe07","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":591.22,"k":"end","sid":"cbe3e53c"},{"t":591.27,"k":"start","sid":"d8734a87","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":593.78,"k":"end","sid":"7558dd1d"},{"t":593.83,"k":"start","sid":"9de0baa3","role":"improve","slot":"v1.glue","idea":"Anytime hardening: emit the first valid block as soon as construct returns, after every improvement (already), and at ex","resumed":false},{"t":606.87,"k":"end","sid":"862afe07"},{"t":607.08,"k":"start","sid":"d46ddc5b","role":"improve","slot":"v0.app","idea":"","resumed":false},{"t":610.17,"k":"end","sid":"9de0baa3"},{"t":610.2,"k":"start","sid":"71cc1618","role":"improve","slot":"v1.glue","idea":"Seed policy: keep deterministic per-instance seeding (hash of N/M/H/A/edges) with SEED as an override; log the seed to s","resumed":false}],"reasons":{"p001":"Plan targets a stale champion, so it does not explain how this variant beats the real one. It analyses lib 70b02c7 (promote 0.9675, 'converges in ~0.15 s and leaves ~90% of the 2 s budget unused'), but the champion is 04","p002":"","p003":"","p004":"The anneal/cover/forest unit scripts are stub-identity tests, not slot-contract tests: each asserts participate() is false and that run() returns false and leaves out untouched (anneal/unit.sh: 'if (anneal_slot::particip"},"slots":{"v0.app":{"title":"the whole solver","owns":["app"]},"v1.glue":{"title":"the glue (everything but the slots)","owns":["app"]},"v1.construct":{"title":"Initial solution construction (k-hop skeleton builder)","owns":["app/construct"]},"v1.search":{"title":"Monotone local search to a fixpoint","owns":["app/search"]},"v1.lns":{"title":"Large-neighbourhood search / perturbation around the incumbent","owns":["app/lns"]},"v1.skeleton":{"title":"Global restructuring of the layered skeleton","owns":["app/skeleton"]},"v2.glue":{"title":"the glue (everything but the slots)","owns":["app"]},"v2.kernel":{"title":"Randomized k-hop construction (cheap, diverse families)","owns":["app/kernel"]},"v2.policy":{"title":"Restart and selection policy over an explicit BuildPlan/PoolView protocol","owns":["app/policy"]},"v2.moves":{"title":"Monotone single-solution local search to a fixpoint","owns":["app/moves"]},"v2.bands":{"title":"Monotone multi-level restructuring of one band of skeleton levels","owns":["app/bands"]}},"hidden":[{"t":358.0,"score":39.1,"zero":0},{"t":392.0,"score":40.0,"zero":5},{"t":518.0,"score":64.0,"zero":0}],"ops":[{"t":417.0,"text":"operator: finish margin added (a run over 85% of the 2 s limit is a failure)"},{"t":388.0,"text":"operator: scoreboard shows the gap to the best known value (%)"},{"t":520.0,"text":"operator: evaluation queue fixed (submission stages FIFO; champion checks first)"}]};
+</script>
+<script>
+const champ = [
+  ["05:03","the starter (shipped baseline)",null,null,0.0,0.0],
+  ["05:38","first IMPROVE solution",0.7799,"30 / 0",0.7799,0.7754],
+  ["05:42","stronger construction",0.1249,"30 / 0",0.9048,0.8991],
+  ["05:43","top-down k-hop skeleton",0.0627,"30 / 0",0.9675,0.9665],
+  ["05:49","raise local search",0.0176,"30 / 0",0.9851,0.9845],
+  ["06:20","restart tuning",0.0025,"29 / 1",0.9876,0.9869],
+  ["06:38","better restarts",0.0071,"29 / 1",0.9947,0.9937],
+  ["06:54","search refinements",0.0031,"29 / 1",0.9978,0.9955],
+  ["07:14","a safe solver (finish margin)",1.9986,"30 / 0",0.9986,0.9975]
+];
+const hidden = [
+  ["05:58","0406f12",39.1,"0 / 45",""],
+  ["06:32","84e4c83",40.0,"5 / 45","killed at the 2 s limit"],
+  ["08:38","4fa538b",64.0,"0 / 45","after the finish margin and the gap-to-best scoreboard"]
+];
+const arch = [
+  ["p001","construct / search / …","0.969 vs 0.985","rejected by AUD: the plan analysed an older champion, not the current one","bad"],
+  ["p002 → v1","glue · construct · search · lns · skeleton","0.9985 vs 0.9986","approved — variant v1","ok"],
+  ["p003 → v2","glue · kernel · policy · moves · bands","0.9989 vs 0.9986","approved — variant v2","ok"],
+  ["p004","anneal / cover / forest","0.9989 vs 0.9986","rejected by AUD: its unit tests only accepted the stubs, so any real implementation would fail them","bad"]
+];
+const ideas = [
+  ["v1.search","revive the champion's dead forest_search and level_search (present in its source, never called)"],
+  ["v1.lns","connected-region destroy: grow a BFS region of 20–100 vertices, reset its levels, rebuild greedily"],
+  ["v1.skeleton","weighted set-cover local search on the deepest skeleton layer: drop redundant expensive vertices"],
+  ["v2.policy","a UCB1 bandit over construction families (top-down, bottom-up, beam, prefix restarts)"],
+  ["v2.bands","exact alternating cover of the deepest band of levels with the levels below it fixed"]
+];
+const tasks = [
+  ["production planning (AHC058)",81.6,"08:41",47.9,"2 variants; 8 accepted steps"],
+  ["Christmas tree cutting (AHC041)",64.0,"08:38",66.8,"3 variants; 8 accepted steps"],
+  ["course timetabling (ITC2007)",51.4,"08:47",46.0,"1 variant; 3 accepted steps"],
+  ["treewidth (PACE)","judging","—",52.9,"1 variant; champion just moved"],
+  ["glass cutting (ROADEF 2018)",0.0,"08:40 (starter)",29.1,"first 2 steps accepted at 09:20–09:46"]
+];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+$("#champ-table tbody").innerHTML = champ.map(r => `<tr><td class="mono">${r[0]}</td><td>${esc(r[1])}</td>
+  <td class="num">${r[2]==null?"—":"+"+r[2].toFixed(4)}</td><td class="num">${r[3]??"—"}</td>
+  <td class="num">${r[4].toFixed(4)}</td><td class="num">${r[5].toFixed(4)}</td></tr>`).join("");
+$("#hidden-table tbody").innerHTML = hidden.map(r => `<tr><td class="mono">${r[0]}</td><td class="mono">${r[1]}</td>
+  <td class="num">${r[2].toFixed(1)}</td><td class="num">${r[3]}</td><td>${esc(r[4])}</td></tr>`).join("");
+$("#arch-table tbody").innerHTML = arch.map(r => `<tr><td class="mono">${esc(r[0])}</td><td>${esc(r[1])}</td>
+  <td class="num">${r[2]}</td><td><span class="pill ${r[4]}">${r[4]==="ok"?"approved":"rejected"}</span> ${esc(r[3])}</td></tr>`).join("");
+$("#ideas").innerHTML = ideas.map(r => `<li><code>${r[0]}</code> — ${esc(r[1])}</li>`).join("");
+$("#tasks-table tbody").innerHTML = tasks.map(r => `<tr><td>${esc(r[0])}</td>
+  <td class="num">${typeof r[1]==="number"?r[1].toFixed(1):r[1]}</td><td class="mono">${r[2]}</td>
+  <td class="num">${r[3].toFixed(1)}</td><td>${esc(r[4])}</td></tr>`).join("");
+
+// two single-series line charts (separate scales, never a dual axis); hover via SVG <title> on enlarged targets
+const mins = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+function chart(el, pts, {ymin, ymax, yticks, cls, ptcls, fmt, ref, refLabel}) {
+  const W = 440, H = 220, L = 40, R = 12, T = 12, B = 28;
+  const xs = pts.map(p => mins(p[0])), x0 = mins("05:00"), x1 = mins("09:00");
+  const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - ymin) / (ymax - ymin)) * (H - T - B);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${el.dataset.label || ""}">`;
+  for (const t of yticks) s += `<line class="gridl" x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${L - 6}" y="${Y(t) + 4}" text-anchor="end">${t}</text>`;
+  for (const h of ["05:00","06:00","07:00","08:00","09:00"]) s += `<text x="${X(mins(h))}" y="${H - 8}" text-anchor="middle">${h}</text>`;
+  s += `<line class="axis" x1="${L}" x2="${W - R}" y1="${Y(ymin)}" y2="${Y(ymin)}"/>`;
+  if (ref != null) s += `<line class="ref" x1="${L}" x2="${W - R}" y1="${Y(ref)}" y2="${Y(ref)}"/><text class="lab" x="${W - R}" y="${Y(ref) - 6}" text-anchor="end">${refLabel}</text>`;
+  // step line: a champion holds until the next one
+  let d = "";
+  pts.forEach((p, i) => { const x = X(xs[i]), y = Y(p[1]); d += i ? ` H${x} V${y}` : `M${x} ${y}`; });
+  s += `<path class="${cls}" d="${d}"/>`;
+  pts.forEach((p, i) => { const x = X(xs[i]), y = Y(p[1]);
+    s += `<g><circle class="${ptcls}" cx="${x}" cy="${y}" r="4.5"/><circle class="hit" cx="${x}" cy="${y}" r="12"><title>${p[0]} UTC — ${fmt(p[1])}${p[2] ? " · " + p[2] : ""}</title></circle></g>`; });
+  const last = pts[pts.length - 1];
+  s += `<text class="lab" x="${X(mins(last[0])) - 8}" y="${Y(last[1]) - 10}" text-anchor="end">${fmt(last[1])}</text>`;
+  el.innerHTML = s + "</svg>";
+}
+chart($("#c1"), champ.map(r => [r[0], r[4], r[1]]), {ymin: 0, ymax: 1, yticks: [0, 0.25, 0.5, 0.75, 1], cls: "ln", ptcls: "pt", fmt: v => v.toFixed(4)});
+chart($("#c2"), hidden.map(r => [r[0], r[2], r[3] + " at 0"]), {ymin: 0, ymax: 100, yticks: [0, 25, 50, 75, 100], cls: "ln2", ptcls: "pt2", fmt: v => v.toFixed(1), ref: 66.8, refLabel: "paper DeepSeek 1017: 66.8"});
+</script>
+
+<script>
+(() => {
+  const R = REPLAY, E = R.events.slice().sort((a, b) => a.t - b.t);
+  const RESTARTS = [388.5, 417.0, 464.2, 519.3];          // controller restarts (fixes installed)
+  const T0 = 300, T1 = Math.max(...E.map(e => e.t)) + 2;
+  const fmt = t => { const h = Math.floor(t / 60), m = Math.floor(t % 60); return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0"); };
+  const esc = x => String(x ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  // sessions: start .. first end event, else the next restart, else the 90-minute cap
+  const sess = {};
+  for (const e of E) {
+    if (e.k === "start") sess[e.sid + "@" + e.t] = {sid: e.sid, t0: e.t, role: e.role, slot: e.slot, idea: e.idea, resumed: e.resumed};
+  }
+  const list = Object.values(sess).sort((a, b) => a.t0 - b.t0);
+  for (const x of list) {
+    const end = E.find(e => e.k === "end" && e.sid === x.sid && e.t >= x.t0);
+    const rs = RESTARTS.find(r => r > x.t0);
+    x.t1 = Math.min(end ? end.t : Infinity, rs ?? Infinity, x.t0 + 90, T1);
+  }
+  const variants = [{id: "v0", t: 300, slots: ["v0.app"]}].concat(E.filter(e => e.k === "variant").map(e => ({id: e.variant, t: e.t, slots: e.slots})));
+  const champs = E.filter(e => e.k === "champion");
+  const slider = document.getElementById("rp-slider"), play = document.getElementById("rp-play"), speed = document.getElementById("rp-speed");
+  slider.max = T1;
+  // mini chart: champion promote mean as a step line with a time cursor
+  const W = 360, H = 120, L = 34, Rr = 8, T = 8, B = 20;
+  const X = v => L + (v - T0) / (T1 - T0) * (W - L - Rr), Y = v => T + (1 - v) * (H - T - B);
+  let path = "";
+  champs.forEach((c, i) => { path += i ? ` H${X(c.t)} V${Y(c.pm)}` : `M${X(c.t)} ${Y(c.pm)}`; });
+  path += ` H${X(T1)}`;
+  const mini = document.getElementById("rp-mini");
+  mini.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="champion promote mean over time">
+    ${[0, 0.5, 1].map(v => `<line class="gridl" x1="${L}" x2="${W - Rr}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 5}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`).join("")}
+    ${[300, 360, 420, 480, 540, 600].map(m => `<text x="${X(m)}" y="${H - 5}" text-anchor="middle">${fmt(m)}</text>`).join("")}
+    <path class="ln" d="${path}"/>
+    <line id="rp-cursor" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--warn)" stroke-width="1.5"/>
+  </svg>`;
+  const cursor = document.getElementById("rp-cursor");
+  function render(t) {
+    document.getElementById("rp-time").textContent = fmt(t) + " UTC";
+    cursor.setAttribute("x1", X(t)); cursor.setAttribute("x2", X(t));
+    const live = list.filter(x => x.t0 <= t && t < x.t1);
+    const champ = champs.filter(c => c.t <= t).pop();
+    const acc = {}; E.filter(e => e.k === "accepted" && e.t <= t).forEach(e => acc[e.slot] = (acc[e.slot] || 0) + 1);
+    document.getElementById("rp-variants").innerHTML = variants.filter(v => v.t <= t).map(v => `
+      <div class="rp-var ${champ && champ.variant === v.id ? "champ" : ""}"><h4><span>variant ${v.id}${v.id === "v0" ? " (the starter: one slot)" : ""}</span>
+      <span class="muted" style="font-weight:400">${champ && champ.variant === v.id ? "holds the champion" : "opened " + fmt(v.t)}</span></h4>
+      ${v.slots.map(sl => `<div class="rp-row"><span class="rp-label">${esc(sl.replace(v.id + ".", ""))}</span>
+        <span class="rp-acc">${acc[sl] ? acc[sl] + " accepted" : ""}</span>
+        ${live.filter(x => x.role === "improve" && x.slot === sl).map(x => `<span class="chip improve" title="${esc(x.idea || "free choice")}">${x.sid}${x.resumed ? " ↻" : ""}</span>`).join(" ")}</div>`).join("")}
+      </div>`).join("");
+    document.getElementById("rp-arch").innerHTML = live.filter(x => x.role !== "improve").map(x => `<span class="chip ${x.role}">${x.role} ${x.sid}</span>`).join(" ") || '<span class="muted">—</span>';
+    const hid = R.hidden.filter(h => h.t <= t).pop();
+    document.getElementById("rp-champ").innerHTML = champ
+      ? `variant <b>${champ.variant}</b> · commit <b>${champ.commit}</b><br>promote mean g <b>${champ.pm.toFixed(4)}</b> · hold-out <b>${champ.hm.toFixed(4)}</b><br>official hidden score: <b>${hid ? hid.score.toFixed(1) : "—"}</b>${hid ? ` <span class="muted">(judged ${fmt(hid.t)}${hid.zero ? `, ${hid.zero}/45 killed at the limit` : ""}; paper DeepSeek 1017: 66.8)</span>` : ""}`
+      : '<span class="muted">measuring the starter…</span>';
+    document.getElementById("rp-gates").textContent = E.filter(e => e.k === "gate" && e.t <= t).length;
+    document.getElementById("rp-acc").textContent = E.filter(e => e.k === "accepted" && e.t <= t).length;
+    document.getElementById("rp-sess").textContent = list.filter(x => x.t0 <= t).length;
+    const items = [];
+    for (const e of E) {
+      if (e.t > t) break;
+      if (e.k === "gate") items.push([e.t, `<span class="${e.ok ? "ok" : "bad"}">${e.stage} ${e.ok ? "passed" : "rejected"}</span> · ${esc(e.slot)} · session ${e.sid} · ${esc(e.why)}`]);
+      else if (e.k === "accepted") items.push([e.t, `<span class="ok">landed</span> in ${e.variant} (${esc(e.slot)}) · +${e.d}`]);
+      else if (e.k === "champion") items.push([e.t, `<b>new champion</b> ${e.variant} ${e.commit} · promote ${e.pm} · hold-out ${e.hm}`]);
+      else if (e.k === "holdout") items.push([e.t, `${e.regressed ? '<span class="bad">hold-out regression</span>' : "hold-out check ok"} · ${esc(e.why)}`]);
+      else if (e.k === "proposed") items.push([e.t, `architecture <b>${e.p}</b> proposed (${(e.slots || []).join(", ")}) · stub mean ${e.mean} → review`]);
+      else if (e.k === "rejected") items.push([e.t, `<span class="bad">architecture ${e.p} rejected</span> by the review · ${esc((R.reasons[e.p] || "").slice(0, 160))}…`]);
+      else if (e.k === "variant") items.push([e.t, `<span class="ok">variant ${e.variant} opened</span> from ${e.p}: ${e.slots.map(x => x.replace(e.variant + ".", "")).join(" · ")}`]);
+    }
+    for (const o of R.ops) if (o.t <= t) items.push([o.t, `<span class="op">${esc(o.text)}</span>`]);
+    for (const h of R.hidden) if (h.t <= t) items.push([h.t, `<b>official judging</b> on 45 hidden instances: <b>${h.score.toFixed(1)}</b>${h.zero ? ` (${h.zero} killed at the 2 s limit)` : ""}`]);
+    items.sort((a, b) => b[0] - a[0]);
+    document.getElementById("rp-feed").innerHTML = items.slice(0, 40).map(([tt, h]) => `<li><span class="tm">${fmt(tt)}</span><span>${h}</span></li>`).join("") || '<li><span class="muted">no events yet</span></li>';
+  }
+  let timer = null, last = 0;
+  const step = ts => { if (!timer) return; const dt = (ts - last) / 1000; last = ts;
+    const v = Math.min(T1, +slider.value + dt * +speed.value); slider.value = v; render(v);
+    if (v >= T1) { stop(); return; } timer = requestAnimationFrame(step); };
+  const stop = () => { if (timer) cancelAnimationFrame(timer); timer = null; play.innerHTML = "&#9654; Play"; };
+  play.addEventListener("click", () => { if (timer) return stop(); if (+slider.value >= T1) slider.value = T0;
+    play.innerHTML = "&#10074;&#10074; Pause"; last = performance.now(); timer = requestAnimationFrame(step); });
+  slider.addEventListener("input", () => render(+slider.value));
+  render(T0);
+})();
+</script>
+</body>
+</html>
