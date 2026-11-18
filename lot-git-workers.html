@@ -148,348 +148,388 @@ pre code{font-size:inherit}
 .evlog button .mono{font-size:12px}
 .evlog li.cur button{background:var(--tree-soft);color:var(--ink)}
 @media (max-width:760px){.roles{grid-template-columns:1fr}}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+html[data-lang="zh"] body [lang="en"]{display:none!important}
+html:not([data-lang="zh"]) body [lang="zh"]{display:none!important}
+.keys{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-width:76ch;font-size:14.5px}
+.role p{font-size:13.5px;color:var(--ink2)}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
-  <div class="eyebrow">hmz-prover-dev · branch zhengyang-lot-git-workers-claude · 62ceb8e</div>
-  <h1>LOT Git Workers: machines the tree cannot reach can help prove</h1>
-  <p class="lede">Normally a LOT tree runs its sessions only on its own host (or in its own Slurm job). Git workers hand some obligations to <strong>another machine</strong>, and the two sides cannot reach each other over the network: all they share is one git repository, and each work order is a branch in it (not a GitHub issue or PR). The tree stays the master and decides what goes out; a proof that comes back still has to pass the tree's gate.</p>
+  <div class="top">
+    <div class="eyebrow">LOT · git workers</div>
+    <div class="seg" role="group" aria-label="Language"><button type="button" data-l="en">EN</button><button type="button" data-l="zh">中文</button></div>
+  </div>
+  <h1><span lang="en">LOT Git Workers: machines the tree cannot reach can help prove</span><span lang="zh">LOT Git Workers：树连不到的机器也能帮忙证明</span></h1>
+  <p class="lede" lang="en">A LOT tree can hand some obligations to <strong>another machine</strong>. The two sides never connect: they share one git repository, and each work order is a branch in it. The tree stays the master, and every proof that comes back must pass the tree's own gate.</p>
+  <p class="lede" lang="zh">LOT 树可以把部分 obligation 交给<strong>另一台机器</strong>。双方从不直连，只共享一个 git 仓库，每张工单就是其中一个分支。树始终是主控，交回的证明必须通过树自己的 gate。</p>
 </header>
 
 <section id="diff">
-  <div class="eyebrow">1 · Compared with a local run</div>
-  <h2>Locally, the controller drives sessions. Remotely, all handover happens through git branches.</h2>
+  <div class="eyebrow"><span lang="en">1 · The idea</span><span lang="zh">1 · 基本思路</span></div>
+  <h2><span lang="en">Locally the controller drives sessions; remotely, all handover goes through git branches.</span><span lang="zh">本地由 controller 直接驱动 session；远程时一切交接都通过 git 分支。</span></h2>
   <div class="cmp">
     <div class="panel">
-      <h3>Local run</h3>
+      <h3><span lang="en">Local run</span><span lang="zh">本地运行</span></h3>
       <div class="host">
-        <span class="lbl">one host / one Slurm job</span>
+        <span class="lbl"><span lang="en">one host / one Slurm job</span><span lang="zh">一台主机 / 一个 Slurm job</span></span>
         <div class="box tree"><b>LOT tree</b>controller + gate + tree.git</div>
         <div class="sessions"><span class="chip">PROVE x0005</span><span class="chip">PROVE x0006</span><span class="chip">DEC x0007</span><span class="chip">…</span></div>
-        <div class="note">The controller launches, pauses and preempts sessions itself; a session hands its proof straight to the gate with <code>lot offer</code>.</div>
       </div>
     </div>
     <div class="panel">
-      <h3>With a remote git worker</h3>
+      <h3><span lang="en">With a remote git worker</span><span lang="zh">加上远程 git worker</span></h3>
       <div class="remote">
-        <div class="box tree"><b>LOT tree</b><span>the same as a local run, plus one gitwork thread</span></div>
+        <div class="box tree"><b>LOT tree</b><span lang="en">+ one gitwork thread</span><span lang="zh">+ 一个 gitwork 线程</span></div>
         <div class="arrow"><span>⇄</span>push / fetch</div>
         <div class="box git"><b>git remote</b>
           <div class="refs"><span>lot-orders/…</span><span>lot-claims/…</span><span>lot-results/…</span></div>
         </div>
         <div class="arrow"><span>⇄</span>push / fetch</div>
-        <div class="box worker"><b>git worker</b><span><code>git-worker.py</code>, its own model and machine</span></div>
+        <div class="box worker"><b>git worker</b><span lang="en">its own machine and model</span><span lang="zh">自己的机器和模型</span></div>
       </div>
-      <div class="wall">no direct connection between the tree and the worker</div>
-      <div class="note">Every state is a branch on the remote: the tree puts out an order, a worker takes the claim, the worker pushes a result, the tree deletes the branches to close it.</div>
+      <div class="wall"><span lang="en">no direct connection between tree and worker</span><span lang="zh">树与 worker 之间没有直接连接</span></div>
     </div>
   </div>
-
-  <div class="tbl panel">
-  <table>
-    <thead><tr><th></th><th>Local session</th><th>Remote git worker</th></tr></thead>
-    <tbody>
-      <tr><th>Connection</th><td>Same file system; the controller starts processes directly</td><td class="hl">Only one shared git remote (e.g. a private GitHub repo); neither side can reach the other</td></tr>
-      <tr><th>Who decides the work</th><td>The controller schedules, preempts, pauses</td><td class="hl">The tree can only put out orders; a worker chooses to take one, and the first to push a claim gets it</td></tr>
-      <tr><th>Handing in a proof</th><td><code>lot offer</code> → gate</td><td class="hl">Push <code>lot-results/…</code> → the tree fetches it and gives it to the gate as an offer (<code>external</code>)</td></tr>
-      <tr><th>Trust</th><td>Checked by the gate</td><td class="hl">Checked again by the same gate. Nothing the worker says counts; only the check does</td></tr>
-      <tr><th>Environment</th><td>The tree's own kit</td><td class="hl">The worker brings the same Lean / Mathlib / trusted checker; if the checker's sha256 differs, it does not take the order</td></tr>
-      <tr><th>Compute and model</th><td>The tree's slots and account</td><td class="hl">The worker's own machine and account (e.g. DeepSeek v4.1 flash)</td></tr>
-      <tr><th>Knowing it is alive</th><td>The controller sees the process</td><td class="hl">A heartbeat commit on the claim every 10 min; 30 min without one ends it as <code>stale</code></td></tr>
-      <tr><th>Splitting</th><td>The tree's DEC</td><td class="hl">Optional <code>--split-depth</code> / <code>--race</code>: the worker grows a small tree of its own; what it hands back is still just this obligation's files</td></tr>
-      <tr><th>When off</th><td colspan="2">Off by default. A tree that does not set <code>git_workers</code> runs exactly as before</td></tr>
-    </tbody>
-  </table>
-  </div>
+  <ul class="keys" lang="en">
+    <li><strong>Order</strong> = branch <code>lot-orders/&lt;tree&gt;/&lt;obl&gt;-&lt;n&gt;</code> pushed by the tree. <strong>Claim</strong> = the worker creates <code>lot-claims/…</code>; only the first push wins. <strong>Result</strong> = <code>lot-results/…</code>. No GitHub issues or PRs.</li>
+    <li>The worker uses its own machine and model, but the same Lean / Mathlib / checker; if the checker's sha256 differs, it refuses the order.</li>
+    <li>Heartbeat every 10 min; 30 min of silence → <code>stale</code>, the obligation goes back to the tree.</li>
+    <li>An order is open for 5 min; if nobody takes it, the tree resumes its own sessions. Off by default.</li>
+  </ul>
+  <ul class="keys" lang="zh">
+    <li><strong>工单</strong> = 树推送的分支 <code>lot-orders/&lt;tree&gt;/&lt;obl&gt;-&lt;n&gt;</code>。<strong>认领</strong> = worker 创建 <code>lot-claims/…</code>，只有第一个 push 成功。<strong>结果</strong> = <code>lot-results/…</code>。不用 GitHub issue 或 PR。</li>
+    <li>worker 用自己的机器和模型，但 Lean / Mathlib / checker 必须相同；checker 的 sha256 不一致就拒单。</li>
+    <li>每 10 分钟一次心跳；30 分钟没有心跳 → <code>stale</code>，obligation 收回给树。</li>
+    <li>工单只等 5 分钟，没人接就由树恢复自己的 session。默认关闭。</li>
+  </ul>
 </section>
 
-<section id="collab">
-  <div class="eyebrow">2 · How the collaboration is set up</div>
-  <h2>A work order is a git branch. No GitHub issues, no pull requests.</h2>
-  <p>The master (whoever runs the tree) and the collaborator (whoever runs a worker) share nothing but one git repository, here a private GitHub repo. No SSH, no VPN, no shared disk, no open port on either machine. The collaborator only needs push access to that repo: the master invites them as a GitHub collaborator.</p>
-
-  <div class="answer panel">
-    <div class="qa"><div class="q">What holds the work orders?</div><div>Branches in one git repository. <strong>One order = one branch</strong>, <code>lot-orders/&lt;tree&gt;/&lt;obligation&gt;-&lt;n&gt;</code>. The branch's files are the ticket: the Lean module to prove, the lib it builds on, and <code>.lot-order/ORDER.json</code> with the frozen statement and the rules.</div></div>
-    <div class="qa"><div class="q">Are GitHub Issues or PRs used?</div><div><strong>No.</strong> No issues, pull requests, comments, labels, Actions or GitHub API calls. Both sides only run <code>git ls-remote</code>, <code>git fetch</code> and <code>git push</code>. GitHub is just where the repository lives; any git server both sides can push to would do. (<code>gh</code> is used only to log in and to download the setup kit.)</div></div>
-    <div class="qa"><div class="q">Then what is <code>ISSUE.md</code>?</div><div>A file inside the order branch: the obligation's task written out in words for the worker's agent. It is not a GitHub issue.</div></div>
-    <div class="qa"><div class="q">How is "taking a ticket" exclusive?</div><div>The worker takes an order by creating the branch <code>lot-claims/…/&lt;order&gt;</code> with a push that succeeds only if the branch does not exist yet. Two workers racing for one order: one push wins, the other is rejected and moves on.</div></div>
-  </div>
-
-  <h3>The whole exchange in git commands</h3>
-  <div class="tbl panel">
-  <table>
-    <thead><tr><th>Step</th><th>Who</th><th>What actually runs</th></tr></thead>
-    <tbody>
-      <tr><td>Put out an order</td><td><span class="t">master</span></td><td class="mono">git push --force-with-lease=lot-orders/T/o001-1: REPO &lt;commit&gt;:lot-orders/T/o001-1</td></tr>
-      <tr><td>Look for orders</td><td><span class="w">worker</span></td><td class="mono">git ls-remote REPO 'refs/heads/lot-orders/*'  <span class="cm"># every --poll seconds</span></td></tr>
-      <tr><td>Take one</td><td><span class="w">worker</span></td><td class="mono">git push --force-with-lease=lot-claims/T/o001-1: REPO &lt;commit&gt;:lot-claims/T/o001-1  <span class="cm"># create-only</span></td></tr>
-      <tr><td>Read the ticket</td><td><span class="w">worker</span></td><td class="mono">git fetch REPO lot-orders/T/o001-1  <span class="cm"># then check out, read ORDER.json + ISSUE.md</span></td></tr>
-      <tr><td>Heartbeat</td><td><span class="w">worker</span></td><td class="mono">git push REPO &lt;heartbeat commit&gt;:lot-claims/T/o001-1  <span class="cm"># every --heartbeat seconds</span></td></tr>
-      <tr><td>Hand in the proof</td><td><span class="w">worker</span></td><td class="mono">git push --force-with-lease=lot-results/T/o001-1: REPO &lt;commit&gt;:lot-results/T/o001-1</td></tr>
-      <tr><td>Follow claims and results</td><td><span class="t">master</span></td><td class="mono">git ls-remote REPO 'refs/heads/lot-claims/*' 'refs/heads/lot-results/*';  git fetch REPO &lt;sha&gt;</td></tr>
-      <tr><td>Close the ticket</td><td><span class="t">master</span></td><td class="mono">git push REPO :lot-orders/T/o001-1 :lot-claims/T/o001-1 :lot-results/T/o001-1  <span class="cm"># delete</span></td></tr>
-    </tbody>
-  </table>
-  </div>
-  <p class="note"><code>T</code> is the tree's name (<code>putnam-1970-b6-pair</code>), <code>REPO</code> the orders repository. The proof the worker pushes is then checked by the tree's own gate before it is accepted.</p>
-
+<section id="start">
+  <div class="eyebrow"><span lang="en">2 · How to start</span><span lang="zh">2 · 如何启动</span></div>
   <div class="roles">
     <div class="panel role">
-      <span class="tag t">Master · once</span>
-      <ol>
-        <li>Create the orders repo with a <code>main</code> branch (a README is enough; it must not be empty, or the first order could never be deleted).</li>
-        <li>Put the worker kit on <code>main</code>: README, <code>setup.sh</code>, <code>worker.sh</code>, the trusted checker byte for byte (with its <code>sha256</code>), and a release with the LOT and hmz sources.</li>
-        <li>Invite the collaborator.</li>
-        <li>Start (or revive) the tree with git workers on:</li>
-      </ol>
+      <span class="tag t"><span lang="en">Master (runs the tree)</span><span lang="zh">主控端（跑树）</span></span>
+      <p lang="en">Create a private orders repo with the worker kit on <code>main</code>, invite the collaborator, then:</p>
+      <p lang="zh">建一个私有工单仓库，把 worker 套件放在 <code>main</code>，邀请协作者，然后：</p>
 <pre><code>ltree run --name putnam-1970-b6-pair ... \
   --param git_workers=hold \
   --param git_remote=https://github.com/&lt;org&gt;/&lt;orders-repo&gt; \
   --param git_worker_model=claude/deepseek-v4.1-flash:max \
-  --param git_worker_min_depth=1 \
-  --param git_worker_wait=300 --param git_worker_lease=6h \
-  --param git_worker_poll=30</code></pre>
+  --param git_worker_min_depth=1</code></pre>
     </div>
     <div class="panel role">
-      <span class="tag w">Collaborator · once, about 1 h</span>
-      <ol>
-        <li>Accept the invitation; <code>gh auth login</code>.</li>
-        <li>Clone the orders repo and run <code>bash setup.sh</code>: it downloads LOT and hmz from the release, checks their SHA256 and the checker's, and builds the same Lean, Mathlib and checker tools at the same absolute paths the checker names.</li>
-        <li>Set up an agent CLI (Claude Code pointed at DeepSeek here, or any model).</li>
-        <li>Start the worker <strong>before</strong> the master puts orders out (an order waits only 5 minutes):</li>
-      </ol>
-<pre><code>WORKER_ID=ziyang-brev-flash bash worker.sh
-# which runs:
-python3 -I lean_option_tree/docker/git-worker.py \
-  --remote https://github.com/&lt;org&gt;/&lt;orders-repo&gt; \
-  --tree putnam-1970-b6-pair --id "$WORKER_ID" \
-  --model claude/deepseek-v4.1-flash:max \
-  --split-depth 1 --race --poll 30 --heartbeat 300</code></pre>
+      <span class="tag w"><span lang="en">Collaborator (runs a worker)</span><span lang="zh">协作者（跑 worker）</span></span>
+      <p lang="en">Clone the orders repo, run <code>bash setup.sh</code> (builds the same toolchain, ~1 h), then start the worker before orders go out:</p>
+      <p lang="zh">克隆工单仓库，运行 <code>bash setup.sh</code>（搭建相同工具链，约 1 小时），在工单发出前启动 worker：</p>
+<pre><code>WORKER_ID=ziyang-brev-flash bash worker.sh</code></pre>
     </div>
   </div>
-
-  <h3>How an order is put out</h3>
-  <p class="note">Every <code>git_worker_poll</code> the tree looks for obligations it may hand out: open, at depth ≥ <code>git_worker_min_depth</code>, all dependencies proved, not marked split-further, never sent before, and not already worked on by the tree for more than 5 minutes. The deepest go first, up to <code>git_worker_orders</code> at a time. For each, it commits a snapshot in its own git and pushes it as a branch. Everything else in the exchange is a branch too:</p>
-  <div class="tbl panel">
-  <table>
-    <thead><tr><th>Branch</th><th>Pushed by</th><th>What is in it</th></tr></thead>
-    <tbody>
-      <tr><td class="mono">lot-orders/&lt;tree&gt;/&lt;obl&gt;-&lt;n&gt;</td><td><span class="t">master</span></td><td>The lib at that moment, the obligation's module with <code>by sorry</code>, <code>.lot-order/ORDER.json</code> and <code>.lot-order/ISSUE.md</code> (the task in words).</td></tr>
-      <tr><td class="mono">lot-claims/&lt;tree&gt;/&lt;obl&gt;-&lt;n&gt;</td><td><span class="w">worker</span></td><td>Created to take the order: creating a branch only succeeds for the first pusher, so exactly one worker gets it. Then one <code>heartbeat</code> commit every <code>--heartbeat</code> seconds.</td></tr>
-      <tr><td class="mono">lot-results/&lt;tree&gt;/&lt;obl&gt;-&lt;n&gt;</td><td><span class="w">worker</span></td><td>The obligation's files, <code>.lot-order/RESULT.json</code> (<code>proved</code> or <code>gave-up</code>) and the agent's <code>NOTES.md</code>.</td></tr>
-      <tr><td class="mono">status</td><td><span class="t">master</span></td><td>Optional <code>STATUS.md</code>, rewritten every 2 minutes: who holds each node, each order's state, recent events. What the collaborator reads to follow along.</td></tr>
-      <tr><td class="mono">main</td><td><span class="t">master</span></td><td>The worker kit. Orders never touch it.</td></tr>
-    </tbody>
-  </table>
-  </div>
-  <p class="note">The master deletes an order's three branches when it ends (landed, untaken, withdrawn, stale, lease over, or the tree ends), so the repo only ever shows what is live. A worker sees its order disappear within one <code>--poll</code> and stops.</p>
-
-  <h3>What an order says (<code>.lot-order/ORDER.json</code>, o001-1, abridged)</h3>
-<pre class="panel"><code>{
-  "tree": "putnam-1970-b6-pair",   "order": "o001-1",   "obl": "o001",
-  "lean_name": "pitot",
-  "lean_statement": "∀ (L : ZMod 4 → EuclideanSpace ℝ (Fin 2)) ... → dist (L 0) (L 1) + dist (L 2) (L 3)
-                     = dist (L 1) (L 2) + dist (L 3) (L 0)",     <span class="cm">// frozen: the worker cannot change it</span>
-  "module_path": "Submission/Obl/pitot.lean",
-  "owned": ["Submission/Obl/pitot.lean", "Submission/Obl/pitot/"],   <span class="cm">// the only paths it may write</span>
-  "lib": "a6cee2cb…",                     <span class="cm">// the lib commit it builds on</span>
-  "checker": {"check.sh": "sha256…", "pristine.tar": "sha256…", "protected.sha256": "sha256…"},
-                                           <span class="cm">// worker refuses the order if its checker differs</span>
-  "model": "claude/deepseek-v4.1-flash:max",
-  "issued": 1793892261,  "lease_until": 1793913861    <span class="cm">// 6 h lease</span>
-}</code></pre>
 </section>
 
 <section id="flow">
-  <div class="eyebrow">3 · How it works</div>
-  <h2>One order, from going out to landing</h2>
-  <p class="note">In <code>git_workers=hold</code> mode (each obligation belongs to one side at a time, workers first), using the real o001 from the paired run. Click a step above, or use the buttons.</p>
+  <div class="eyebrow"><span lang="en">3 · Demo: one order, step by step</span><span lang="zh">3 · 演示：一张工单的全过程</span></div>
   <div class="panel stepper">
     <div class="steps" role="tablist" id="steps"></div>
     <div class="stage">
       <div class="desc"><h3 id="s-title"></h3><p id="s-text"></p></div>
       <div class="lanes">
-        <div class="lane tree"><h4>Tree (master)</h4><div id="l-tree"></div></div>
+        <div class="lane tree"><h4><span lang="en">Tree (master)</span><span lang="zh">树（主控）</span></h4><div id="l-tree"></div></div>
         <div class="lane git"><h4>git remote</h4><div id="l-git"></div></div>
         <div class="lane worker"><h4>Worker</h4><div id="l-worker"></div></div>
       </div>
       <div class="real" id="s-real"></div>
-      <div class="nav"><button id="prev" type="button">← Previous</button><button id="next" type="button">Next →</button></div>
+      <div class="nav"><button id="prev" type="button"></button><button id="next" type="button"></button></div>
     </div>
   </div>
-
-  <h3>Not every order lands: the other endings</h3>
-  <div class="ends">
-    <div class="panel"><span class="tag" style="color:var(--muted)">untaken</span><div>No worker takes it within 5 minutes. The order is deleted and the obligation is the tree's; the tree resumes its paused sessions with their conversations kept.</div><div class="note">Example: o002, o003; x0009–x0011 resumed at minute 32.7</div></div>
-    <div class="panel"><span class="tag" style="color:var(--warn)">withdrawn</span><div>The obligation no longer needs a proof (the tree proved its parent, or it was superseded). The tree deletes all three branches; the worker notices within one <code>--poll</code> and stops, pushing nothing.</div><div class="note">Example: o009 (the tree proved o004 directly), o015 (o002 proved directly)</div></div>
-    <div class="panel"><span class="tag" style="color:var(--warn)">stale</span><div>The claim has had no heartbeat for 30 minutes. The tree takes the worker for gone and takes the obligation back.</div></div>
-    <div class="panel"><span class="tag" style="color:var(--warn)">gave-up / lease over</span><div>The worker pushes <code>gave-up</code>, or the lease (12 h by default) runs out. Either way the obligation is the tree's.</div></div>
-    <div class="panel"><span class="tag" style="color:var(--warn)">tree ends</span><div>Proved, deadline or cancelled: every order still out is withdrawn.</div></div>
-  </div>
-
-  <h3>Hold-mode rules: no work done twice, none dropped</h3>
-  <ul class="rules">
-    <li>An obligation goes out at most once. If it comes back unproved, it stays with the tree for good.</li>
-    <li>For 5 minutes after it goes out (<code>git_worker_wait</code>) it belongs to the workers only. The tree pauses its own PROVE / DEC on it, starts no new ones, leaves it out of the preemption plan, and the gate refuses a <code>lot offer</code> of it from any other session (409).</li>
-    <li>An obligation the tree has already worked on for more than 5 minutes is never put out.</li>
-    <li>Only obligations at depth ≥ <code>git_worker_min_depth</code>, with all dependencies proved and not marked split-further, go out; the deepest first.</li>
-  </ul>
+  <p class="note" lang="en">Other endings: <b>untaken</b> (nobody claims in 5 min), <b>withdrawn</b> (no longer needed), <b>stale</b> (no heartbeat), <b>gave-up / lease over</b>. In every case the obligation returns to the tree.</p>
+  <p class="note" lang="zh">其他结局：<b>untaken</b>（5 分钟无人认领）、<b>withdrawn</b>（已不需要）、<b>stale</b>（没有心跳）、<b>gave-up / 租期到</b>。这些情况下 obligation 都回到树。</p>
 </section>
 
 <section id="run">
-  <div class="eyebrow">4 · A real run</div>
-  <h2>putnam_1970_b6 paired run, 2026-11-05</h2>
-  <p class="note">The master was Slurm job 48 (machP); the remote worker was <code>ziyang-brev-flash</code>, run by qinz1yang on a brev machine; the orders repo was <code>ZhengyangZhang06/lot-orders-putnam1970b6-pair</code>. Started 14:56, proved 18:25, official check passed. Below, the proof tree is on the left and each obligation's timeline is on the same row to the right. Drag the slider, press Play, or click an event.</p>
+  <div class="eyebrow"><span lang="en">4 · Demo: a real run</span><span lang="zh">4 · 演示：一次真实运行</span></div>
+  <h2><span lang="en">putnam_1970_b6 paired run, 2026-11-05</span><span lang="zh">putnam_1970_b6 联合运行，2026-11-05</span></h2>
   <div class="facts">
-    <div><strong>16</strong>orders put out</div>
-    <div><strong>4</strong>taken by the worker</div>
-    <div><strong>2</strong>proved by the worker and landed (o001, o011)</div>
-    <div><strong>3h29m</strong>total, proof passed the official check</div>
+    <div><strong>16</strong><span lang="en">orders put out</span><span lang="zh">张工单发出</span></div>
+    <div><strong>4</strong><span lang="en">taken by the worker</span><span lang="zh">张被 worker 认领</span></div>
+    <div><strong>2</strong><span lang="en">proved by the worker (o001, o011)</span><span lang="zh">个由 worker 证明（o001、o011）</span></div>
+    <div><strong>3h29m</strong><span lang="en">total, passed the official check</span><span lang="zh">总用时，通过官方检查</span></div>
   </div>
   <div class="panel chart">
     <div class="ctrl">
-      <button id="play" type="button">▶ Play</button>
+      <button id="play" type="button"></button>
       <input id="tslider" type="range" min="0" max="208.8" step="0.1" value="208.8" aria-label="Time in the run">
       <span id="tclock" class="mono"></span>
     </div>
     <div id="tcap" class="tcap"></div>
     <div class="scroll"><svg id="replay" role="img" aria-label="Proof tree and per-obligation timeline of the paired run"></svg></div>
-    <div class="legend">
-      <span><i class="ring" style="border-color:var(--tree)"></i>tree working on it</span>
-      <span><i class="ring" style="border-color:var(--tree);border-style:dashed"></i>split, waiting on children</span>
-      <span><i style="background:var(--wait)"></i>order out (5-min window)</span>
-      <span><i style="background:var(--worker)"></i>worker has it</span>
-      <span><i class="dot" style="background:var(--tree)"></i>proved by the tree</span>
-      <span><i class="dot" style="background:var(--worker)"></i>proved by the worker</span>
-      <span><i class="ring" style="border-color:var(--muted);border-style:dotted"></i>superseded</span>
-    </div>
+    <div class="legend" id="legend1"></div>
     <ol class="evlog" id="evlog"></ol>
-  </div>
-  <div class="tbl panel">
-    <table>
-      <thead><tr><th>order</th><th>out</th><th>taken</th><th>ended</th><th>outcome</th><th>note</th></tr></thead>
-      <tbody id="otable"></tbody>
-    </table>
   </div>
 </section>
 
 <section id="slots">
-  <div class="eyebrow">5 · A worker with 2 slots</div>
-  <h2>putnam_1970_b6 again, with a worker that holds 2 orders at once</h2>
-  <p>Here a <strong>slot</strong> is one order the worker holds. Within an order, the worker still runs its own race and split (prove lane, split, sub-lemmas) no matter how many slots it has. Today <code>git-worker.py</code> takes one order per process, so 2 slots means two worker processes with different <code>--id</code> on the same machine.</p>
+  <div class="eyebrow"><span lang="en">5 · Demo: a worker with 2 slots</span><span lang="zh">5 · 演示：worker 同时持有 2 单</span></div>
+  <h2><span lang="en">The same problem, if the worker held 2 orders at once</span><span lang="zh">同一道题，假如 worker 能同时接 2 单</span></h2>
   <div class="facts">
-    <div><strong>≈2h23m</strong>to the proved root</div>
-    <div><strong>8</strong>obligations in the tree</div>
-    <div><strong>2</strong>orders proved by the worker (o001, o002)</div>
+    <div><strong>≈2h23m</strong><span lang="en">to the proved root</span><span lang="zh">证明 root 用时</span></div>
+    <div><strong>8</strong><span lang="en">obligations in the tree</span><span lang="zh">个 obligation</span></div>
+    <div><strong>2</strong><span lang="en">proved by the worker (o001, o002)</span><span lang="zh">个由 worker 证明（o001、o002）</span></div>
   </div>
-  <p class="note">Timings: the tree's sessions as on 2026-11-05; o002's worker time (98 min) as our worker proved o002 on 2026-11-04 with the same settings.</p>
-
   <div class="panel chart">
     <div class="ctrl">
-      <button id="wplay" type="button">▶ Play</button>
+      <button id="wplay" type="button"></button>
       <input id="wslider" type="range" min="0" max="208.8" step="0.1" value="208.8" aria-label="Time in the run">
       <span id="wclock" class="mono"></span>
     </div>
     <div id="wcap" class="tcap"></div>
     <div class="scroll"><svg id="wsvg" role="img" aria-label="Proof tree, per-obligation timeline and the worker's slots"></svg></div>
-    <div class="legend">
-      <span><i class="ring" style="border-color:var(--tree)"></i>tree working on it</span>
-      <span><i class="ring" style="border-color:var(--tree);border-style:dashed"></i>split, waiting on children</span>
-      <span><i style="background:var(--wait)"></i>order out (5-min window)</span>
-      <span><i style="background:var(--worker)"></i>worker has it</span>
-      <span><i class="dot" style="background:var(--tree)"></i>proved by the tree</span>
-      <span><i class="dot" style="background:var(--worker)"></i>proved by the worker</span>
-      <span><i class="ring" style="border-color:var(--muted);border-style:dotted"></i>superseded</span>
-    </div>
+    <div class="legend" id="legend2"></div>
     <ol class="evlog" id="wlog"></ol>
   </div>
 </section>
 </div>
 
 <script>
-const STEPS=[
- {t:"Pick",title:"The tree picks an obligation to hand out",
-  text:"Every git_worker_poll the gitwork thread looks at the tree: open, depth ≥ min_depth, dependencies proved, never sent before; the deepest first.",
-  tree:["s001 just split root into o001–o003","o001 is open; the tree's own PROVE x0006 has just started"],git:[],gitNew:[],
-  worker:["ls-remote every 60 s (--poll); no orders yet"],
-  real:"Started 14:56:38. About 27 minutes later the root split was done and o001–o003 qualified."},
- {t:"Order",title:"The tree pushes an order branch and steps back from the obligation",
-  text:"The order branch holds the lib at that moment, the obligation's module (by sorry) and .lot-order/ORDER.json: the frozen statement, the paths it may change, the checker's sha256, the model, lease_until. The tree pauses its own sessions on it (conversations kept) and the 5-minute window starts.",
-  tree:["pauses x0006 (gitwork-paused, conversation kept)","no new sessions on o001; preemption leaves it out","gate refuses others' lot offer of o001"],
-  git:["lot-orders/putnam-1970-b6-pair/o001-1"],gitNew:[0],
-  worker:["has not seen it yet"],
-  real:"15:24:20 o001-1, o002-1 and o003-1 go out; x0005–x0008 paused."},
- {t:"Claim",title:"The worker takes a claim: only one push can succeed",
-  text:"The worker first checks that the checker sha256 in ORDER.json matches its own, then creates a lot-claims branch. Only the first push of a new branch succeeds, so two workers never do the same order.",
-  tree:["sees the claim → gitwork-claimed","o001 is the worker's until the order ends"],
-  git:["lot-orders/…/o001-1","lot-claims/…/o001-1"],gitNew:[1],
-  worker:["checker digests match ✓","push new branch lot-claims/…/o001-1 ✓"],
-  real:"15:24:52 taken by ziyang-brev-flash, 31 seconds after it went out. Nobody took o002 or o003; after 5 minutes they ended untaken and the tree resumed its own sessions."},
- {t:"Prove",title:"The worker proves it on its own machine",
-  text:"It checks out the order and runs hmz exec -f lean_remote; the trusted check runs after every turn, and a failure goes back with the check's last lines. With --split-depth / --race it grows a small tree of its own. Meanwhile it pushes heartbeats and watches for withdrawal.",
-  tree:["only watches whether the claim moves","30 min with no heartbeat → stale, taken back","obligation no longer needs a proof → withdrawn"],
-  git:["lot-orders/…/o001-1","lot-claims/…/o001-1  ← heartbeat every 600 s"],gitNew:[1],
-  worker:["sessions 1..3, up to 12 turns each","trusted check after every turn","heartbeat every 600 s; checks for withdrawal every 60 s"],
-  real:"The worker used DeepSeek v4.1 flash with --split-depth 1 --race and worked for about 64 minutes."},
- {t:"Return",title:"The worker pushes a result branch",
-  text:"The lot-results branch holds the obligation's files, .lot-order/RESULT.json (proved or gave-up) and the agent's NOTES.md. The tree posts the notes on the obligation's thread.",
-  tree:["fetches the result → gitwork-submitted"],
-  git:["lot-orders/…/o001-1","lot-claims/…/o001-1","lot-results/…/o001-1"],gitNew:[2],
-  worker:["trusted check passed ✓","push lot-results/…/o001-1 (proved)","goes looking for the next order"],
-  real:"16:29:09 the tree received o001's result."},
- {t:"Re-check",title:"The tree's gate checks it again, the same way as a local offer",
-  text:"The result goes to the gate as an offer (offer-submitted, with external: the order). It is checked like any local session's proof; only a pass lands it, and the accepted row says via git-worker.",
-  tree:["gate checks g00006","pass → landed (via git-worker)"],
-  git:["lot-orders/…/o001-1","lot-claims/…/o001-1","lot-results/…/o001-1"],gitNew:[],
-  worker:["already on something else"],
-  real:"16:31:03 offer g00006 landed, about 2 minutes after it arrived."},
- {t:"Close",title:"The tree deletes the three branches and drops the paused session",
-  text:"Once the order is answered it is withdrawn: all three branches are deleted from the remote. The paused x0006 is no longer needed and is disposed of. o001 is proved.",
-  tree:["race-paused-disposed x0006","gitwork-ended o001-1 how=landed","o001 ✓ proved"],
-  git:["lot-orders/…/o001-1","lot-claims/…/o001-1","lot-results/…/o001-1"],gitGone:true,gitNew:[],
-  worker:["—"],
-  real:"16:31:10 gitwork-ended landed. Later the worker also proved o011 (landed 17:43)."}
-];
-let cur=0;
+/* ---------- language ---------- */
+let LANG="en";
+try{if(localStorage.getItem("lgw-lang")==="zh")LANG="zh"}catch(e){}
+const L=(en,zh)=>LANG==="zh"?zh:en;
+const RERENDER=[];
+function setLang(l){
+  LANG=l;document.documentElement.dataset.lang=l;document.documentElement.lang=l==="zh"?"zh-CN":"en";
+  try{localStorage.setItem("lgw-lang",l)}catch(e){}
+  document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.l===l));
+  RERENDER.forEach(f=>f());
+}
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>setLang(b.dataset.l));
+
 const $=id=>document.getElementById(id);
 const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-STEPS.forEach((s,i)=>{const b=document.createElement("button");b.type="button";b.role="tab";b.innerHTML=`<span class="n">${i+1}</span>${s.t}`;b.onclick=()=>show(i);$("steps").appendChild(b)});
+const LBL={tree:["tree working","树在做"],split:["split","已拆分"],out:["order out","工单外发"],worker:["worker has it","worker 在做"],gate:["gate re-check","gate 复检"],pt:["✓ by tree","✓ 树证明"],pw:["✓ by worker","✓ worker 证明"],super:["superseded","被取代"]};
+const LCOL={tree:"var(--tree)",split:"var(--tree)",out:"var(--muted)",worker:"var(--worker)",gate:"var(--tree)",pt:"var(--tree)",pw:"var(--worker)",super:"var(--muted)"};
+const lbl=st=>L(...LBL[st]);
+const SIDE={tree:["tree","树"],worker:["worker","worker"]};
+const LEG=[
+ ['<i class="ring" style="border-color:var(--tree)"></i>',"tree working on it","树在做"],
+ ['<i class="ring" style="border-color:var(--tree);border-style:dashed"></i>',"split, waiting on children","已拆分，等子节点"],
+ ['<i style="background:var(--wait)"></i>',"order out (5-min window)","工单外发（5 分钟窗口）"],
+ ['<i style="background:var(--worker)"></i>',"worker has it","worker 在做"],
+ ['<i class="dot" style="background:var(--tree)"></i>',"proved by the tree","树证明"],
+ ['<i class="dot" style="background:var(--worker)"></i>',"proved by the worker","worker 证明"],
+ ['<i class="ring" style="border-color:var(--muted);border-style:dotted"></i>',"superseded","被取代"]];
+function legend(){const h=LEG.map(([i,e,z])=>`<span>${i}${L(e,z)}</span>`).join("");$("legend1").innerHTML=h;$("legend2").innerHTML=h}
+RERENDER.push(legend);
+
+/* ---------- section 3: stepper ---------- */
+const STEPS=[
+ {git:[],gitNew:[],
+  en:{t:"Pick",title:"The tree picks an obligation to hand out",
+  text:"Every git_worker_poll the gitwork thread scans the tree: open, depth ≥ min_depth, dependencies proved, never sent before; the deepest first.",
+  tree:["s001 just split root into o001–o003","o001 is open; the tree's own PROVE x0006 has just started"],
+  worker:["ls-remote every 60 s (--poll); no orders yet"],
+  real:"Started 14:56:38. About 27 minutes later the root split was done and o001–o003 qualified."},
+  zh:{t:"挑选",title:"树挑出一个要外发的 obligation",
+  text:"每隔 git_worker_poll，gitwork 线程扫描整棵树：状态 open、深度 ≥ min_depth、依赖都已证明、从未发过；最深的优先。",
+  tree:["s001 刚把 root 拆成 o001–o003","o001 是 open 的；树自己的 PROVE x0006 刚启动"],
+  worker:["每 60 秒 ls-remote 一次（--poll）；还没有工单"],
+  real:"14:56:38 开始。约 27 分钟后 root 拆分完成，o001–o003 符合条件。"}},
+ {git:["lot-orders/putnam-1970-b6-pair/o001-1"],gitNew:[0],
+  en:{t:"Order",title:"The tree pushes an order branch and steps back",
+  text:"The order branch holds the lib, the obligation's module (by sorry) and .lot-order/ORDER.json: frozen statement, writable paths, checker sha256, model, lease. The tree pauses its own sessions on it (conversations kept); the 5-minute window starts.",
+  tree:["pauses x0006 (conversation kept)","no new sessions on o001","gate refuses others' lot offer of o001"],
+  worker:["has not seen it yet"],
+  real:"15:24:20 o001-1, o002-1 and o003-1 go out; x0005–x0008 paused."},
+  zh:{t:"发单",title:"树推送工单分支，并让出这个 obligation",
+  text:"工单分支包含 lib、该 obligation 的模块（by sorry）和 .lot-order/ORDER.json：冻结的命题、可写路径、checker sha256、模型、租期。树暂停自己在它上面的 session（保留对话），5 分钟窗口开始。",
+  tree:["暂停 x0006（保留对话）","o001 上不再开新 session","gate 拒绝其他 session 对 o001 的 lot offer"],
+  worker:["还没看到"],
+  real:"15:24:20 o001-1、o002-1、o003-1 发出；x0005–x0008 暂停。"}},
+ {git:["lot-orders/…/o001-1","lot-claims/…/o001-1"],gitNew:[1],
+  en:{t:"Claim",title:"The worker claims it: only one push can succeed",
+  text:"The worker checks the checker sha256 in ORDER.json against its own, then creates a lot-claims branch. Only the first push of a new branch succeeds, so two workers never do the same order.",
+  tree:["sees the claim → gitwork-claimed","o001 is the worker's until the order ends"],
+  worker:["checker digests match ✓","push new branch lot-claims/…/o001-1 ✓"],
+  real:"15:24:52 taken by ziyang-brev-flash, 31 s after it went out. Nobody took o002 or o003; after 5 min the tree resumed its own sessions."},
+  zh:{t:"认领",title:"worker 认领：只有一次 push 能成功",
+  text:"worker 先核对 ORDER.json 里的 checker sha256 与自己的一致，再创建 lot-claims 分支。新分支只有第一个 push 能成功，所以两个 worker 不会做同一单。",
+  tree:["看到认领 → gitwork-claimed","工单结束前 o001 归 worker"],
+  worker:["checker 摘要一致 ✓","push 新分支 lot-claims/…/o001-1 ✓"],
+  real:"15:24:52 被 ziyang-brev-flash 认领，距发出 31 秒。o002、o003 无人认领，5 分钟后树恢复自己的 session。"}},
+ {git:["lot-orders/…/o001-1","lot-claims/…/o001-1  ← heartbeat"],gitNew:[1],
+  en:{t:"Prove",title:"The worker proves it on its own machine",
+  text:"It runs hmz exec -f lean_remote; the trusted check runs after every turn. With --split-depth / --race it grows a small tree of its own. Meanwhile it pushes heartbeats and watches for withdrawal.",
+  tree:["only watches the claim branch","30 min with no heartbeat → stale, taken back","no longer needed → withdrawn"],
+  worker:["sessions 1..3, up to 12 turns each","trusted check after every turn","heartbeat every 600 s"],
+  real:"DeepSeek v4.1 flash with --split-depth 1 --race, about 64 minutes."},
+  zh:{t:"证明",title:"worker 在自己的机器上证明",
+  text:"运行 hmz exec -f lean_remote，每轮之后跑可信检查。开了 --split-depth / --race 时会自己长一棵小树。同时推送心跳并留意撤单。",
+  tree:["只看认领分支是否在动","30 分钟无心跳 → stale，收回","不再需要 → withdrawn"],
+  worker:["session 1..3，每个最多 12 轮","每轮后跑可信检查","每 600 秒心跳"],
+  real:"DeepSeek v4.1 flash，--split-depth 1 --race，约 64 分钟。"}},
+ {git:["lot-orders/…/o001-1","lot-claims/…/o001-1","lot-results/…/o001-1"],gitNew:[2],
+  en:{t:"Return",title:"The worker pushes a result branch",
+  text:"lot-results holds the obligation's files, .lot-order/RESULT.json (proved or gave-up) and the agent's NOTES.md.",
+  tree:["fetches the result → gitwork-submitted"],
+  worker:["trusted check passed ✓","push lot-results/…/o001-1 (proved)","looks for the next order"],
+  real:"16:29:09 the tree received o001's result."},
+  zh:{t:"交回",title:"worker 推送结果分支",
+  text:"lot-results 包含该 obligation 的文件、.lot-order/RESULT.json（proved 或 gave-up）以及 agent 的 NOTES.md。",
+  tree:["fetch 结果 → gitwork-submitted"],
+  worker:["可信检查通过 ✓","push lot-results/…/o001-1（proved）","去找下一单"],
+  real:"16:29:09 树收到 o001 的结果。"}},
+ {git:["lot-orders/…/o001-1","lot-claims/…/o001-1","lot-results/…/o001-1"],gitNew:[],
+  en:{t:"Re-check",title:"The tree's gate checks it again, like any local offer",
+  text:"The result goes to the gate as an offer. Only a pass lands it; nothing the worker says counts.",
+  tree:["gate checks g00006","pass → landed (via git-worker)"],
+  worker:["already on something else"],
+  real:"16:31:03 offer g00006 landed, about 2 minutes after it arrived."},
+  zh:{t:"复检",title:"树的 gate 再检查一遍，和本地 offer 一样",
+  text:"结果作为 offer 交给 gate。只有通过才落地；worker 说什么都不算数。",
+  tree:["gate 检查 g00006","通过 → landed（via git-worker）"],
+  worker:["已在做别的"],
+  real:"16:31:03 offer g00006 落地，到达后约 2 分钟。"}},
+ {git:["lot-orders/…/o001-1","lot-claims/…/o001-1","lot-results/…/o001-1"],gitGone:true,gitNew:[],
+  en:{t:"Close",title:"The tree deletes the three branches",
+  text:"Once answered, the order is closed: all three branches are deleted from the remote. The paused x0006 is dropped. o001 is proved.",
+  tree:["race-paused-disposed x0006","gitwork-ended o001-1 how=landed","o001 ✓ proved"],
+  worker:["—"],
+  real:"16:31:10 gitwork-ended landed. Later the worker also proved o011 (landed 17:43)."},
+  zh:{t:"关单",title:"树删除三个分支",
+  text:"工单有结果后即关闭：三个分支都从 remote 删除。暂停的 x0006 被丢弃。o001 已证明。",
+  tree:["race-paused-disposed x0006","gitwork-ended o001-1 how=landed","o001 ✓ 已证明"],
+  worker:["—"],
+  real:"16:31:10 gitwork-ended landed。之后 worker 还证明了 o011（17:43 落地）。"}}
+];
+let cur=0;
 function list(a){return a.length?"<ul>"+a.map(x=>`<li>${esc(x)}</li>`).join("")+"</ul>":'<div class="idle">—</div>'}
+function buildSteps(){
+  $("steps").innerHTML="";
+  STEPS.forEach((s,i)=>{const b=document.createElement("button");b.type="button";b.setAttribute("role","tab");b.innerHTML=`<span class="n">${i+1}</span>${s[LANG].t}`;b.onclick=()=>show(i);$("steps").appendChild(b)});
+  $("prev").textContent=L("← Previous","← 上一步");$("next").textContent=L("Next →","下一步 →");
+  show(cur);
+}
 function show(i){
-  cur=i;const s=STEPS[i];
+  cur=i;const s=STEPS[i],x=s[LANG];
   [...$("steps").children].forEach((b,j)=>b.setAttribute("aria-selected",j===i));
-  $("s-title").textContent=`${i+1}. ${s.title}`;$("s-text").textContent=s.text;
-  $("l-tree").innerHTML=list(s.tree);$("l-worker").innerHTML=list(s.worker);
-  $("l-git").innerHTML=s.git.length?s.git.map((r,j)=>`<div class="ref ${s.gitGone?"gone":s.gitNew.includes(j)?"new":""}">${esc(r)}</div>`).join("")+(s.gitGone?'<div class="idle">all deleted</div>':""):'<div class="idle">only main</div>';
-  $("s-real").innerHTML="<b>From the record: </b>"+esc(s.real);
+  $("s-title").textContent=`${i+1}. ${x.title}`;$("s-text").textContent=x.text;
+  $("l-tree").innerHTML=list(x.tree);$("l-worker").innerHTML=list(x.worker);
+  $("l-git").innerHTML=s.git.length?s.git.map((r,j)=>`<div class="ref ${s.gitGone?"gone":s.gitNew.includes(j)?"new":""}">${esc(r)}</div>`).join("")+(s.gitGone?`<div class="idle">${L("all deleted","全部删除")}</div>`:""):`<div class="idle">${L("only main","只有 main")}</div>`;
+  $("s-real").innerHTML=`<b>${L("From the record: ","实际记录：")}</b>`+esc(x.real);
   $("prev").disabled=i===0;$("next").disabled=i===STEPS.length-1;
 }
 $("prev").onclick=()=>show(Math.max(0,cur-1));$("next").onclick=()=>show(Math.min(STEPS.length-1,cur+1));
-show(0);
+RERENDER.push(buildSteps);
 
-/* real data: minutes from 14:56:38 UTC; [order, issued, claimed, submitted, ended, how, note] */
+/* ---------- shared replay helpers ---------- */
+/* minutes from 14:56:38 UTC; O: [order, issued, claimed, submitted, ended, how]; N: [id, parent, depth, lean name, appears, done, done how, split at] */
 const T0=14*60+56+38/60, END=208.8;
-const O=[
-["o001-1",27.7,28.2,92.5,94.5,"landed","Proved by the worker; the tree's paused x0006 was dropped"],
-["o002-1",27.7,null,null,32.7,"untaken","Tree resumed x0009/x0011 and later proved it itself"],
-["o003-1",27.7,null,null,32.7,"untaken","Tree resumed x0010"],
-["o004-2",74.4,null,null,79.4,"untaken","First push collided (o004-1); the retry got number -2"],
-["o005-2",74.4,null,null,79.4,"untaken","Same: re-sent after a push collision"],
-["o006-1",75.4,null,null,80.4,"untaken",""],
-["o007-1",79.4,null,null,84.4,"untaken",""],
-["o008-1",79.4,null,null,84.4,"untaken",""],
-["o009-1",115.6,116.1,null,136.2,"withdrawn","The tree proved the parent o004 directly first; o009 no longer needed a proof"],
-["o010-1",115.6,null,null,120.6,"untaken",""],
-["o011-1",138.7,139.3,165.0,166.4,"landed","Proved by the worker"],
-["o012-1",138.7,null,null,143.8,"untaken","Tree resumed x0035"],
-["o013-1",138.7,null,null,143.8,"untaken",""],
-["o014-1",138.7,null,null,143.8,"untaken",""],
-["o015-1",173.0,174.0,null,204.2,"withdrawn","The tree proved o002 directly; o015 was superseded"],
-["o016-1",173.0,null,null,178.0,"untaken",""]];
-/* the proof tree, DFS order: [id, parent, depth, lean name, appears, done, done how, split at] */
-const N=[
+const clock=m=>{const t=T0+m;const h=Math.floor(t/60),mm=Math.floor(t%60);return `${String(h).padStart(2,"0")}:${String(mm).padStart(2,"0")}`};
+const since=m=>`+${Math.floor(m/60)}h${String(Math.floor(m%60)).padStart(2,"0")}m`;
+const W=1000,TW=400,X0=420,X1=984,RH=26,TOP=36;
+const xt=m=>X0+m/END*(X1-X0);
+const ny=i=>TOP+i*RH+RH/2, nx=d=>18+d*24;
+const playTxt=on=>on?L("❚❚ Pause","❚❚ 暂停"):L("▶ Play","▶ 播放");
+
+function makeReplay(cfg){
+  /* cfg: {N,O,EV,SL,slots,end,svg,log,cap,clock,slider,play,clipId} */
+  const ord={};cfg.O.forEach(o=>{ord[o[0].split("-")[0]]=o});
+  const row={};cfg.N.forEach((n,i)=>row[n[0]]=i);
+  const slots=cfg.slots||0;
+  const sTop=TOP+cfg.N.length*RH+30, sy=k=>sTop+(k-1)*RH+RH/2;
+  const H=slots?sTop+slots*RH+30:TOP+cfg.N.length*RH+30;
+  const svg=$(cfg.svg);
+  let T=END,raf=null,last=0;
+  function stateAt(n,t){
+    const [id,,,,app,done,how,split]=n;
+    if(t<app)return null;
+    if(t>=done)return how==="super"?"super":how==="worker"?"pw":"pt";
+    const o=ord[id];
+    if(o){const [,iss,cl,sub,end]=o;
+      if(t>=iss&&t<(cl??end))return "out";
+      if(cl!=null&&t>=cl&&t<end)return sub!=null&&t>=sub?"gate":"worker";}
+    return split!=null&&t>=split?"split":"tree";
+  }
+  function build(){
+    svg.setAttribute("viewBox",`0 0 ${W} ${H}`);Object.assign(svg.style,{display:"block",width:"100%",height:"auto",minWidth:"760px"});
+    let s=`<text x="8" y="16" font-size="11" fill="var(--muted)" font-weight="500">${L("PROOF TREE","证明树")}</text><text x="${X0}" y="16" font-size="11" fill="var(--muted)" font-weight="500">${L("TIMELINE (UTC)","时间线 (UTC)")}</text>`;
+    if(slots)s+=`<text x="8" y="${sTop-10}" font-size="11" fill="var(--muted)" font-weight="500">${L("WORKER SLOTS (one order each)","WORKER SLOT（每个一单）")}</text>`;
+    s+=`<line x1="${TW+8}" x2="${TW+8}" y1="6" y2="${H-6}" stroke="var(--line)"/>`;
+    for(const c of [3.4,63.4,123.4,183.4])s+=`<line x1="${xt(c)}" x2="${xt(c)}" y1="${TOP-8}" y2="${H-24}" stroke="var(--line)"/><text x="${xt(c)}" y="${H-8}" font-size="11" fill="var(--muted)" text-anchor="middle">${clock(c)}</text>`;
+    if(cfg.end<END)s+=`<line x1="${xt(cfg.end)}" x2="${xt(cfg.end)}" y1="${TOP-8}" y2="${H-24}" stroke="var(--ok)" stroke-dasharray="3 3"/><text x="${xt(cfg.end)-4}" y="${TOP-12}" font-size="11" fill="var(--ok)" text-anchor="end">${L("proved","证毕")} ${clock(cfg.end)}</text>`;
+    cfg.N.forEach((n,i)=>{if(i%2)s+=`<rect x="0" y="${TOP+i*RH}" width="${W}" height="${RH}" fill="var(--git-soft)" opacity=".5"/>`});
+    for(let k=1;k<=slots;k++)s+=`<rect x="0" y="${sTop+(k-1)*RH}" width="${W}" height="${RH}" fill="var(--git-soft)" opacity="${k%2?.9:.5}"/><text x="${TW-2}" y="${sy(k)+4}" font-size="11.5" fill="var(--ink)" text-anchor="end">slot ${k}</text>`;
+    let m="";
+    cfg.N.forEach((n,i)=>{const [id,,,,app,done,how]=n;const y=ny(i);const o=ord[id];
+      const spans=o?[[app,o[1]],[o[4],done]]:[[app,done]];
+      for(const [a,b] of spans)if(b>a)m+=`<rect x="${xt(a)}" y="${y-2}" width="${xt(b)-xt(a)}" height="4" rx="2" fill="var(--tree)" opacity=".55"/>`;
+      if(o){const [,iss,cl,sub,end]=o;
+        m+=`<rect x="${xt(iss)}" y="${y-5}" width="${Math.max(2,xt(cl??end)-xt(iss))}" height="10" rx="2" fill="var(--wait)"/>`;
+        if(cl!=null){m+=`<rect x="${xt(cl)+1}" y="${y-5}" width="${Math.max(2,xt(sub??end)-xt(cl)-1)}" height="10" rx="2" fill="var(--worker)"/>`;
+          if(sub!=null)m+=`<rect x="${xt(sub)+2}" y="${y-5}" width="${Math.max(3,xt(end)-xt(sub)-2)}" height="10" rx="2" fill="var(--tree)"/>`;}}
+      m+=how==="super"?`<text x="${xt(done)}" y="${y+4}" font-size="11" fill="var(--muted)" text-anchor="middle">×</text>`
+        :`<circle cx="${xt(done)}" cy="${y}" r="4.5" fill="${how==="worker"?"var(--worker)":"var(--tree)"}" stroke="var(--panel)" stroke-width="2"/>`;
+    });
+    (cfg.SL||[]).forEach(([k,id,a,b,e,how])=>{const y=sy(k),w=xt(b)-xt(a);
+      m+=`<rect x="${xt(a)}" y="${y-8}" width="${Math.max(2,w)}" height="16" rx="3" fill="var(--worker)"/>`;
+      if(w>40)m+=`<text x="${xt(a)+5}" y="${y+4}" font-size="10.5" fill="var(--panel)">${id}</text>`;
+      m+=`<text x="${xt(b)+4}" y="${y+4}" font-size="11" fill="${how==="landed"?"var(--ok)":"var(--muted)"}">${how==="landed"?"✓":"×"}</text>`;});
+    s+=`<defs><clipPath id="${cfg.clipId}"><rect class="pastr" x="0" y="0" width="${X0}" height="${H}"/></clipPath></defs>`;
+    s+=`<g opacity=".16">${m}</g><g clip-path="url(#${cfg.clipId})">${m}</g><g class="treeg"></g>`;
+    s+=`<line class="ph" y1="${TOP-10}" y2="${H-24}" stroke="var(--ink)" stroke-width="1.5"/><text class="phl" y="${TOP-14}" font-size="11" fill="var(--ink)" text-anchor="middle"></text>`;
+    svg.innerHTML=s;
+    $(cfg.log).innerHTML=cfg.EV.map(([t,side,en,zh],i)=>`<li><button type="button" data-i="${i}"><span class="mono">${clock(t)}</span><span class="${side==="worker"?"w":"t"}">${L(...SIDE[side])}</span><span>${L(en,zh)}</span></button></li>`).join("");
+    $(cfg.play).textContent=playTxt(!!raf);
+    setT(T);
+  }
+  function drawTree(t){
+    let s="";
+    cfg.N.forEach((n,i)=>{const [,par,d]=n;const st=stateAt(n,t);if(!st||!par)return;
+      s+=`<path d="M${nx(d-1)} ${ny(row[par])+7} V${ny(i)} H${nx(d)-7}" fill="none" stroke="var(--muted)" stroke-opacity=".6"/>`;});
+    cfg.N.forEach((n,i)=>{const [id,,d,name]=n;const st=stateAt(n,t);const x=nx(d),y=ny(i);
+      if(!st){s+=`<text x="${x-4}" y="${y+4}" font-size="11.5" fill="var(--muted)" opacity=".35">${id}</text>`;return;}
+      const col=LCOL[st],filled=st==="pt"||st==="pw";
+      const dash=st==="split"?' stroke-dasharray="3 2"':st==="super"?' stroke-dasharray="1.5 2"':"";
+      s+=`<circle cx="${x}" cy="${y}" r="6" fill="${filled?col:st==="out"?"var(--wait)":"var(--panel)"}" stroke="${col}" stroke-width="2"${dash}/>`;
+      const lx=x+12,max=Math.floor((296-lx-36)/6.6);const nm=name.length>max?name.slice(0,max-1)+"…":name;
+      s+=`<text x="${lx}" y="${y+4}" font-size="11.5" fill="var(--ink)"${st==="super"?' text-decoration="line-through" opacity=".6"':""}>${id} <tspan fill="var(--muted)">${nm}</tspan></text>`;
+      s+=`<text x="${TW-2}" y="${y+4}" font-size="11" fill="${col}" text-anchor="end" font-weight="500">${lbl(st)}</text>`;});
+    for(let k=1;k<=slots;k++){const c=cfg.SL.find(([kk,,a,,e])=>kk===k&&t>=a&&t<e);
+      s+=`<text x="12" y="${sy(k)+4}" font-size="11.5" fill="${c?"var(--worker)":"var(--muted)"}">${c?L("holds ","持有 ")+c[1]:L("free","空闲")}</text>`;}
+    svg.querySelector(".treeg").innerHTML=s;
+  }
+  function setT(t){
+    T=Math.max(0,Math.min(END,t));
+    $(cfg.slider).value=T;
+    svg.querySelector(".pastr").setAttribute("width",xt(T));
+    const ph=svg.querySelector(".ph");ph.setAttribute("x1",xt(T));ph.setAttribute("x2",xt(T));
+    const pl=svg.querySelector(".phl");pl.setAttribute("x",Math.min(X1-14,Math.max(X0+14,xt(T))));pl.textContent=clock(T);
+    $(cfg.clock).textContent=`${clock(T)} UTC · ${since(T)}`;
+    drawTree(T);
+    let k=-1;cfg.EV.forEach((e,i)=>{if(e[0]<=T+1e-9)k=i});
+    $(cfg.cap).textContent=k>=0?`${clock(cfg.EV[k][0])} · ${L(cfg.EV[k][2],cfg.EV[k][3])}`:"";
+    [...$(cfg.log).children].forEach((li,i)=>li.classList.toggle("cur",i===k));
+  }
+  function stop(){if(raf)cancelAnimationFrame(raf);raf=null;$(cfg.play).textContent=playTxt(false)}
+  function tick(ts){if(last)setT(T+(ts-last)/1000*(END/45));last=ts;if(T>=END){stop();return}raf=requestAnimationFrame(tick)}
+  $(cfg.play).onclick=()=>{if(raf){stop();return}if(T>=END)setT(0);last=0;raf=requestAnimationFrame(tick);$(cfg.play).textContent=playTxt(true)};
+  $(cfg.slider).addEventListener("input",e=>{stop();setT(+e.target.value)});
+  $(cfg.log).addEventListener("click",e=>{const b=e.target.closest("button");if(b){stop();setT(cfg.EV[+b.dataset.i][0]+0.05)}});
+  RERENDER.push(build);
+}
+
+/* ---------- section 4: the real paired run ---------- */
+makeReplay({svg:"replay",log:"evlog",cap:"tcap",clock:"tclock",slider:"tslider",play:"play",clipId:"past1",end:END,
+O:[
+["o001-1",27.7,28.2,92.5,94.5,"landed"],["o002-1",27.7,null,null,32.7,"untaken"],["o003-1",27.7,null,null,32.7,"untaken"],
+["o004-2",74.4,null,null,79.4,"untaken"],["o005-2",74.4,null,null,79.4,"untaken"],["o006-1",75.4,null,null,80.4,"untaken"],
+["o007-1",79.4,null,null,84.4,"untaken"],["o008-1",79.4,null,null,84.4,"untaken"],["o009-1",115.6,116.1,null,136.2,"withdrawn"],
+["o010-1",115.6,null,null,120.6,"untaken"],["o011-1",138.7,139.3,165.0,166.4,"landed"],["o012-1",138.7,null,null,143.8,"untaken"],
+["o013-1",138.7,null,null,143.8,"untaken"],["o014-1",138.7,null,null,143.8,"untaken"],["o015-1",173.0,174.0,null,204.2,"withdrawn"],
+["o016-1",173.0,null,null,178.0,"untaken"]],
+N:[
 ["root",null,0,"putnam_1970_b6",0,204.0,"tree",27.7],
 ["o001","root",1,"pitot",27.7,94.4,"worker",null],
 ["o002","root",1,"bretschneider",27.7,203.9,"tree",75.4],
@@ -506,126 +546,38 @@ const N=[
 ["o004","o003",2,"convex_position",73.9,136.2,"tree",115.6],
 ["o009","o004",3,"wSameSide_of_segment_interior_disjoint",115.6,136.2,"super",null],
 ["o010","o004",3,"sOppSide_of_wSameSide_of_wSameSide",115.6,136.2,"super",null],
-["o005","o003",2,"cospherical_of_angle_sum_of_opposite_sides",73.9,93.0,"tree",null]];
-const EV=[
-[0.0,"tree","The tree starts on root: its own PROVE and DEC sessions."],
-[27.7,"tree","Root is split into o001–o003. Orders o001-1, o002-1, o003-1 go out; the tree pauses its 4 sessions on them."],
-[28.2,"worker","The worker claims o001-1, 31 s after it went out."],
-[32.7,"tree","Nobody took o002 and o003 in 5 min: untaken. The tree resumes its paused sessions with their conversations."],
-[73.9,"tree","o003 is split into o004, o005. The first pushes collide; they go out as o004-2, o005-2."],
-[75.4,"tree","o002 is split into o006–o008; o006 goes out."],
-[79.4,"tree","o004, o005 untaken; o007, o008 go out."],
-[84.4,"tree","o006–o008 untaken: all back with the tree."],
-[93.0,"tree","The tree proves o005."],
-[94.4,"worker","The worker's proof of o001 passes the tree's gate and lands. The tree's paused x0006 is dropped."],
-[115.6,"tree","The tree proves o007. o004 is split into o009, o010; both go out and the worker claims o009."],
-[120.6,"tree","o010 untaken."],
-[130.7,"tree","The tree proves o008."],
-[136.2,"tree","The tree proves o004 outright, so o009 and o010 are superseded. The worker's o009 is withdrawn mid-work."],
-[138.2,"tree","o003 is proved through its split (o004 + o005)."],
-[138.7,"tree","o006 is split into o011–o014; all four go out. The worker claims o011."],
-[143.8,"tree","o012–o014 untaken."],
-[154.6,"tree","The tree proves o013."],
-[161.9,"tree","The tree proves o014."],
-[166.4,"worker","The worker's proof of o011 lands."],
-[173.0,"tree","o012 is split into o015, o016; both go out. The worker claims o015 a minute later."],
-[178.0,"tree","o016 untaken."],
-[194.1,"tree","The tree proves o016."],
-[203.9,"tree","The tree proves o002 outright (x0009: the session paused for o002's order, resumed when it went untaken). o006, o012, o015 are superseded; the worker's o015 is withdrawn. Root is proved through its split."],
-[208.8,"tree","Final review done: putnam_1970_b6 proved in 3h29m."]];
-const HOW={landed:"landed",untaken:"untaken → tree's",withdrawn:"withdrawn"};
-const clock=m=>{const t=T0+m;const h=Math.floor(t/60),mm=Math.floor(t%60);return `${String(h).padStart(2,"0")}:${String(mm).padStart(2,"0")}`};
-const since=m=>`+${Math.floor(m/60)}h${String(Math.floor(m%60)).padStart(2,"0")}m`;
-const ord={};O.forEach(o=>{ord[o[0].split("-")[0]]=o});
+["o005","o003",2,"cospherical_of_angle_sum_of_opposite_sides",73.9,93.0,"tree",null]],
+EV:[
+[0.0,"tree","The tree starts on root: its own PROVE and DEC sessions.","树开始处理 root：自己的 PROVE 和 DEC session。"],
+[27.7,"tree","Root is split into o001–o003. Three orders go out; the tree pauses its 4 sessions on them.","root 拆成 o001–o003。三张工单发出；树暂停其上的 4 个 session。"],
+[28.2,"worker","The worker claims o001-1, 31 s after it went out.","worker 认领 o001-1，距发出 31 秒。"],
+[32.7,"tree","Nobody took o002 and o003 in 5 min: untaken. The tree resumes its paused sessions.","o002、o003 5 分钟内无人认领：untaken。树恢复暂停的 session。"],
+[73.9,"tree","o003 is split into o004, o005. The first pushes collide; they go out as o004-2, o005-2.","o003 拆成 o004、o005。首次 push 冲突，改以 o004-2、o005-2 发出。"],
+[75.4,"tree","o002 is split into o006–o008; o006 goes out.","o002 拆成 o006–o008；o006 发出。"],
+[79.4,"tree","o004, o005 untaken; o007, o008 go out.","o004、o005 无人认领；o007、o008 发出。"],
+[84.4,"tree","o006–o008 untaken: all back with the tree.","o006–o008 无人认领：全部回到树。"],
+[93.0,"tree","The tree proves o005.","树证明了 o005。"],
+[94.4,"worker","The worker's proof of o001 passes the tree's gate and lands.","worker 对 o001 的证明通过树的 gate，落地。"],
+[115.6,"tree","The tree proves o007. o004 is split into o009, o010; the worker claims o009.","树证明了 o007。o004 拆成 o009、o010；worker 认领 o009。"],
+[120.6,"tree","o010 untaken.","o010 无人认领。"],
+[130.7,"tree","The tree proves o008.","树证明了 o008。"],
+[136.2,"tree","The tree proves o004 outright; o009, o010 superseded. The worker's o009 is withdrawn.","树直接证明了 o004；o009、o010 被取代。worker 手上的 o009 撤单。"],
+[138.2,"tree","o003 is proved through its split (o004 + o005).","o003 通过拆分（o004 + o005）得证。"],
+[138.7,"tree","o006 is split into o011–o014; all four go out. The worker claims o011.","o006 拆成 o011–o014，四个都发出。worker 认领 o011。"],
+[143.8,"tree","o012–o014 untaken.","o012–o014 无人认领。"],
+[154.6,"tree","The tree proves o013.","树证明了 o013。"],
+[161.9,"tree","The tree proves o014.","树证明了 o014。"],
+[166.4,"worker","The worker's proof of o011 lands.","worker 对 o011 的证明落地。"],
+[173.0,"tree","o012 is split into o015, o016; the worker claims o015 a minute later.","o012 拆成 o015、o016；一分钟后 worker 认领 o015。"],
+[178.0,"tree","o016 untaken.","o016 无人认领。"],
+[194.1,"tree","The tree proves o016.","树证明了 o016。"],
+[203.9,"tree","The tree proves o002 outright; o006, o012, o015 superseded, the worker's o015 withdrawn. Root is proved.","树直接证明了 o002；o006、o012、o015 被取代，worker 的 o015 撤单。root 得证。"],
+[208.8,"tree","Final review done: putnam_1970_b6 proved in 3h29m.","最终复核完成：putnam_1970_b6 用时 3h29m 证明。"]]
+});
 
-const W=1000,TW=400,X0=420,X1=984,RH=26,TOP=36,H=TOP+N.length*RH+30;
-const xt=m=>X0+m/END*(X1-X0);
-const row={};N.forEach((n,i)=>row[n[0]]=i);
-const ny=i=>TOP+i*RH+RH/2, nx=d=>18+d*24;
-function stateAt(n,t){
-  const [id,,,,app,done,how,split]=n;
-  if(t<app)return null;
-  if(t>=done)return how==="super"?"super":how==="worker"?"pw":"pt";
-  const o=ord[id];
-  if(o){const [,iss,cl,sub,end]=o;
-    if(t>=iss&&t<(cl??end))return "out";
-    if(cl!=null&&t>=cl&&t<end)return sub!=null&&t>=sub?"gate":"worker";}
-  return split!=null&&t>=split?"split":"tree";
-}
-const LBL={tree:"tree working",split:"split",out:"order out",worker:"worker has it",gate:"gate re-check",pt:"✓ by tree",pw:"✓ by worker",super:"superseded"};
-const LCOL={tree:"var(--tree)",split:"var(--tree)",out:"var(--muted)",worker:"var(--worker)",gate:"var(--tree)",pt:"var(--tree)",pw:"var(--worker)",super:"var(--muted)"};
-function timelineMarks(){
-  let s="";
-  N.forEach((n,i)=>{const [id,,,,app,done,how]=n;const y=ny(i);const o=ord[id];
-    const spans=o?[[app,o[1]],[o[4],done]]:[[app,done]];
-    for(const [a,b] of spans)if(b>a)s+=`<rect x="${xt(a)}" y="${y-2}" width="${xt(b)-xt(a)}" height="4" rx="2" fill="var(--tree)" opacity=".55"/>`;
-    if(o){const [,iss,cl,sub,end]=o;
-      s+=`<rect x="${xt(iss)}" y="${y-5}" width="${Math.max(2,xt(cl??end)-xt(iss))}" height="10" rx="2" fill="var(--wait)"/>`;
-      if(cl!=null){s+=`<rect x="${xt(cl)+1}" y="${y-5}" width="${Math.max(2,xt(sub??end)-xt(cl)-1)}" height="10" rx="2" fill="var(--worker)"/>`;
-        if(sub!=null)s+=`<rect x="${xt(sub)+2}" y="${y-5}" width="${Math.max(3,xt(end)-xt(sub)-2)}" height="10" rx="2" fill="var(--tree)"/>`;}}
-    s+=how==="super"?`<text x="${xt(done)}" y="${y+4}" font-size="11" fill="var(--muted)" text-anchor="middle">×</text>`
-      :`<circle cx="${xt(done)}" cy="${y}" r="4.5" fill="${how==="worker"?"var(--worker)":"var(--tree)"}" stroke="var(--panel)" stroke-width="2"/>`;
-  });
-  return s;
-}
-const svg=$("replay");
-svg.setAttribute("viewBox",`0 0 ${W} ${H}`);Object.assign(svg.style,{display:"block",width:"100%",height:"auto",minWidth:"760px"});
-let base=`<text x="8" y="16" font-size="11" fill="var(--muted)" font-weight="500">PROOF TREE</text><text x="${X0}" y="16" font-size="11" fill="var(--muted)" font-weight="500">TIMELINE (UTC)</text>`;
-base+=`<line x1="${TW+8}" x2="${TW+8}" y1="6" y2="${H-6}" stroke="var(--line)"/>`;
-for(const c of [3.4,63.4,123.4,183.4])base+=`<line x1="${xt(c)}" x2="${xt(c)}" y1="${TOP-8}" y2="${H-24}" stroke="var(--line)"/><text x="${xt(c)}" y="${H-8}" font-size="11" fill="var(--muted)" text-anchor="middle">${clock(c)}</text>`;
-N.forEach((n,i)=>{if(i%2)base+=`<rect x="0" y="${TOP+i*RH}" width="${W}" height="${RH}" fill="var(--git-soft)" opacity=".5"/>`});
-const marks=timelineMarks();
-base+=`<defs><clipPath id="past"><rect id="pastr" x="0" y="0" width="${X0}" height="${H}"/></clipPath></defs>`;
-base+=`<g opacity=".16">${marks}</g><g clip-path="url(#past)">${marks}</g>`;
-base+=`<g id="treeg"></g><line id="ph" y1="${TOP-10}" y2="${H-24}" stroke="var(--ink)" stroke-width="1.5"/><text id="phl" y="${TOP-14}" font-size="11" fill="var(--ink)" text-anchor="middle"></text>`;
-svg.innerHTML=base;
-function drawTree(t){
-  let s="";
-  N.forEach((n,i)=>{const [id,par,d,name]=n;const st=stateAt(n,t);if(!st||!par)return;
-    const p=row[par],px=nx(d-1),cx=nx(d),y=ny(i);
-    s+=`<path d="M${px} ${ny(p)+7} V${y} H${cx-7}" fill="none" stroke="var(--muted)" stroke-opacity=".6"/>`;});
-  N.forEach((n,i)=>{const [id,,d,name]=n;const st=stateAt(n,t);const x=nx(d),y=ny(i);
-    if(!st){s+=`<text x="${x-4}" y="${y+4}" font-size="11.5" fill="var(--muted)" opacity=".35">${id}</text>`;return;}
-    const col=LCOL[st];
-    const filled=st==="pt"||st==="pw";
-    const dash=st==="split"?' stroke-dasharray="3 2"':st==="super"?' stroke-dasharray="1.5 2"':"";
-    s+=`<circle cx="${x}" cy="${y}" r="6" fill="${filled?col:st==="out"?"var(--wait)":"var(--panel)"}" stroke="${col}" stroke-width="2"${dash}/>`;
-    const lx=x+12,max=Math.floor((296-lx-36)/6.6);
-    const nm=name.length>max?name.slice(0,max-1)+"…":name;
-    s+=`<text x="${lx}" y="${y+4}" font-size="11.5" fill="var(--ink)"${st==="super"?' text-decoration="line-through" opacity=".6"':""}>${id} <tspan fill="var(--muted)">${nm}</tspan></text>`;
-    s+=`<text x="${TW-2}" y="${y+4}" font-size="11" fill="${col}" text-anchor="end" font-weight="500">${LBL[st]}</text>`;
-  });
-  $("treeg").innerHTML=s;
-}
-const evlog=$("evlog");
-evlog.innerHTML=EV.map(([t,side,txt],i)=>`<li><button type="button" data-i="${i}"><span class="mono">${clock(t)}</span><span class="${side==="worker"?"w":"t"}">${side}</span><span>${txt}</span></button></li>`).join("");
-evlog.addEventListener("click",e=>{const b=e.target.closest("button");if(b){stop();setT(EV[+b.dataset.i][0]+0.05)}});
-let T=END;
-function setT(t){
-  T=Math.max(0,Math.min(END,t));
-  $("tslider").value=T;
-  $("pastr").setAttribute("width",xt(T));
-  $("ph").setAttribute("x1",xt(T));$("ph").setAttribute("x2",xt(T));
-  const pl=$("phl");pl.setAttribute("x",Math.min(X1-14,Math.max(X0+14,xt(T))));pl.textContent=clock(T);
-  $("tclock").textContent=`${clock(T)} UTC · ${since(T)}`;
-  drawTree(T);
-  let k=-1;EV.forEach((e,i)=>{if(e[0]<=T+1e-9)k=i});
-  $("tcap").textContent=k>=0?`${clock(EV[k][0])} · ${EV[k][2]}`:"";
-  [...evlog.children].forEach((li,i)=>li.classList.toggle("cur",i===k));
-}
-let raf=null,last=0;
-function stop(){if(raf)cancelAnimationFrame(raf);raf=null;$("play").textContent="▶ Play"}
-function tick(ts){if(last)setT(T+(ts-last)/1000*(END/45));last=ts;if(T>=END){stop();return}raf=requestAnimationFrame(tick)}
-$("play").onclick=()=>{if(raf){stop();return}if(T>=END)setT(0);last=0;$("play").textContent="❚❚ Pause";raf=requestAnimationFrame(tick)};
-$("tslider").addEventListener("input",e=>{stop();setT(+e.target.value)});
-setT(END);
-
-$("otable").innerHTML=O.map(([id,iss,cl,sub,end,how,note])=>`<tr><td class="mono">${id}</td><td class="mono">${clock(iss)}</td><td class="mono">${cl!=null?clock(cl):"—"}</td><td class="mono">${clock(end)}</td><td>${HOW[how]}</td><td>${esc(note)}</td></tr>`).join("");
-
-
-/* section 5: the same replay with a worker that holds 2 orders at once */
-(function(){
-const N2=[
+/* ---------- section 5: same run, worker with 2 slots ---------- */
+makeReplay({svg:"wsvg",log:"wlog",cap:"wcap",clock:"wclock",slider:"wslider",play:"wplay",clipId:"past2",end:143.1,slots:2,
+N:[
 ["root",null,0,"putnam_1970_b6",0,138.2,"tree",27.7],
 ["o001","root",1,"pitot",27.7,94.4,"worker",null],
 ["o002","root",1,"bretschneider",27.7,127.9,"worker",null],
@@ -633,119 +585,30 @@ const N2=[
 ["o004","o003",2,"convex_position",73.9,136.2,"tree",115.6],
 ["o009","o004",3,"wSameSide_of_segment_interior_disjoint",115.6,136.2,"super",null],
 ["o010","o004",3,"sOppSide_of_wSameSide_of_wSameSide",115.6,136.2,"super",null],
-["o005","o003",2,"cospherical_of_angle_sum_of_opposite_sides",73.9,93.0,"tree",null]];
-const O2=[
-["o001-1",27.7,28.2,92.5,94.4,"landed",""],
-["o002-1",27.7,28.2,126.0,127.9,"landed",""],
-["o003-1",27.7,null,null,32.7,"untaken",""],
-["o004-2",74.4,null,null,79.4,"untaken",""],
-["o005-2",74.4,null,null,79.4,"untaken",""],
-["o009-1",115.6,116.1,null,136.2,"withdrawn",""],
-["o010-1",115.6,null,null,120.6,"untaken",""]];
-const EV2=[
-[0.0,"tree","The tree starts on root: its own PROVE and DEC sessions."],
-[27.7,"tree","Root is split into o001–o003; three orders go out and the tree pauses its sessions on them."],
-[28.2,"worker","The worker takes o001-1 in slot 1 and o002-1 in slot 2. Both slots are now busy."],
-[32.7,"tree","o003 untaken: the tree's for good. The tree keeps its PROVE and DEC off o002, so it never splits it."],
-[73.9,"tree","o003 is split into o004, o005; both go out, but both worker slots are busy."],
-[79.4,"tree","o004, o005 untaken."],
-[93.0,"tree","The tree proves o005."],
-[94.4,"worker","Slot 1: o001 lands. Slot 1 is free."],
-[115.6,"tree","o004 is split into o009, o010; both go out. Slot 1 takes o009; slot 2 is still on o002."],
-[120.6,"tree","o010 untaken."],
-[127.9,"worker","Slot 2: o002 lands after 98 min of worker time (the worker's own race and split, as on 11-04)."],
-[136.2,"tree","The tree proves o004 outright: o009, o010 superseded; slot 1's o009 is withdrawn."],
-[138.2,"tree","o003 proved through its split. o001, o002 and o003 are all proved, so root is proved through s001."],
-[143.1,"tree","Final review done: proved in about 2h23m."]];
-const SL2=[[1,"o001-1",28.2,92.5,94.4,"landed"],[1,"o009-1",116.1,136.2,136.2,"withdrawn"],[2,"o002-1",28.2,126.0,127.9,"landed"]];
-const SC={w2:{N:N2,O:O2,EV:EV2,SL:SL2,slots:2,end:143.1}};
-let K="w2",T=END,raf=null,last=0,ctx=null;
-const g=id=>document.getElementById(id);
-const svg=g("wsvg");
-const W=1000,TW=400,X0=420,X1=984,RH=26,TOP=36;
-const xt=m=>X0+m/END*(X1-X0);
-const LBL={tree:"tree working",split:"split",out:"order out",worker:"worker has it",gate:"gate re-check",pt:"✓ by tree",pw:"✓ by worker",super:"superseded"};
-const LCOL={tree:"var(--tree)",split:"var(--tree)",out:"var(--muted)",worker:"var(--worker)",gate:"var(--tree)",pt:"var(--tree)",pw:"var(--worker)",super:"var(--muted)"};
-function stateAt(sc,n,t){
-  const [id,,,,app,done,how,split]=n;
-  if(t<app)return null;
-  if(t>=done)return how==="super"?"super":how==="worker"?"pw":"pt";
-  const o=sc.ord[id];
-  if(o){const [,iss,cl,sub,end]=o;
-    if(t>=iss&&t<(cl??end))return "out";
-    if(cl!=null&&t>=cl&&t<end)return sub!=null&&t>=sub?"gate":"worker";}
-  return split!=null&&t>=split?"split":"tree";
-}
-function build(){
-  const sc=SC[K];sc.ord={};sc.O.forEach(o=>{sc.ord[o[0].split("-")[0]]=o});
-  const row={};sc.N.forEach((n,i)=>row[n[0]]=i);
-  const ny=i=>TOP+i*RH+RH/2, nx=d=>18+d*24;
-  const sTop=TOP+sc.N.length*RH+30, sy=k=>sTop+(k-1)*RH+RH/2;
-  const H=sTop+sc.slots*RH+30;
-  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);Object.assign(svg.style,{display:"block",width:"100%",height:"auto",minWidth:"760px"});
-  let s=`<text x="8" y="16" font-size="11" fill="var(--muted)" font-weight="500">PROOF TREE</text><text x="${X0}" y="16" font-size="11" fill="var(--muted)" font-weight="500">TIMELINE (UTC)</text>`;
-  s+=`<text x="8" y="${sTop-10}" font-size="11" fill="var(--muted)" font-weight="500">WORKER SLOTS (one order each)</text>`;
-  s+=`<line x1="${TW+8}" x2="${TW+8}" y1="6" y2="${H-6}" stroke="var(--line)"/>`;
-  for(const c of [3.4,63.4,123.4,183.4])s+=`<line x1="${xt(c)}" x2="${xt(c)}" y1="${TOP-8}" y2="${H-24}" stroke="var(--line)"/><text x="${xt(c)}" y="${H-8}" font-size="11" fill="var(--muted)" text-anchor="middle">${clock(c)}</text>`;
-  s+=`<line x1="${xt(sc.end)}" x2="${xt(sc.end)}" y1="${TOP-8}" y2="${H-24}" stroke="var(--ok)" stroke-dasharray="3 3"/><text x="${xt(sc.end)-4}" y="${TOP-12}" font-size="11" fill="var(--ok)" text-anchor="end">proved ${clock(sc.end)}</text>`;
-  sc.N.forEach((n,i)=>{if(i%2)s+=`<rect x="0" y="${TOP+i*RH}" width="${W}" height="${RH}" fill="var(--git-soft)" opacity=".5"/>`});
-  for(let k=1;k<=sc.slots;k++)s+=`<rect x="0" y="${sTop+(k-1)*RH}" width="${W}" height="${RH}" fill="var(--git-soft)" opacity="${k%2?.9:.5}"/><text x="${TW-2}" y="${sy(k)+4}" font-size="11.5" fill="var(--ink)" text-anchor="end">slot ${k}</text>`;
-  let m="";
-  sc.N.forEach((n,i)=>{const [id,,,,app,done,how]=n;const y=ny(i);const o=sc.ord[id];
-    const spans=o?[[app,o[1]],[o[4],done]]:[[app,done]];
-    for(const [a,b] of spans)if(b>a)m+=`<rect x="${xt(a)}" y="${y-2}" width="${xt(b)-xt(a)}" height="4" rx="2" fill="var(--tree)" opacity=".55"/>`;
-    if(o){const [,iss,cl,sub,end]=o;
-      m+=`<rect x="${xt(iss)}" y="${y-5}" width="${Math.max(2,xt(cl??end)-xt(iss))}" height="10" rx="2" fill="var(--wait)"/>`;
-      if(cl!=null){m+=`<rect x="${xt(cl)+1}" y="${y-5}" width="${Math.max(2,xt(sub??end)-xt(cl)-1)}" height="10" rx="2" fill="var(--worker)"/>`;
-        if(sub!=null)m+=`<rect x="${xt(sub)+2}" y="${y-5}" width="${Math.max(3,xt(end)-xt(sub)-2)}" height="10" rx="2" fill="var(--tree)"/>`;}}
-    m+=how==="super"?`<text x="${xt(done)}" y="${y+4}" font-size="11" fill="var(--muted)" text-anchor="middle">×</text>`
-      :`<circle cx="${xt(done)}" cy="${y}" r="4.5" fill="${how==="worker"?"var(--worker)":"var(--tree)"}" stroke="var(--panel)" stroke-width="2"/>`;
-  });
-  sc.SL.forEach(([k,id,a,b,e,how])=>{const y=sy(k),w=xt(b)-xt(a);
-    m+=`<rect x="${xt(a)}" y="${y-8}" width="${Math.max(2,w)}" height="16" rx="3" fill="var(--worker)"/>`;
-    if(w>40)m+=`<text x="${xt(a)+5}" y="${y+4}" font-size="10.5" fill="var(--panel)">${id}</text>`;
-    m+=`<text x="${xt(b)+4}" y="${y+4}" font-size="11" fill="${how==="landed"?"var(--ok)":"var(--muted)"}">${how==="landed"?"✓":"×"}</text>`;});
-  s+=`<defs><clipPath id="wpast"><rect id="wpastr" x="0" y="0" width="${X0}" height="${H}"/></clipPath></defs>`;
-  s+=`<g opacity=".16">${m}</g><g clip-path="url(#wpast)">${m}</g><g id="wtree"></g>`;
-  s+=`<line id="wph" y1="${TOP-10}" y2="${H-24}" stroke="var(--ink)" stroke-width="1.5"/>`;
-  svg.innerHTML=s;
-  ctx={sc,row,ny,nx,sy};
-  g("wlog").innerHTML=sc.EV.map(([t,side,txt],i)=>`<li><button type="button" data-i="${i}"><span class="mono">${clock(t)}</span><span class="${side==="worker"?"w":"t"}">${side}</span><span>${txt}</span></button></li>`).join("");
-}
-function drawTree(t){
-  const {sc,row,ny,nx,sy}=ctx;let s="";
-  sc.N.forEach((n,i)=>{const [id,par,d]=n;const st=stateAt(sc,n,t);if(!st||!par)return;
-    s+=`<path d="M${nx(d-1)} ${ny(row[par])+7} V${ny(i)} H${nx(d)-7}" fill="none" stroke="var(--muted)" stroke-opacity=".6"/>`;});
-  sc.N.forEach((n,i)=>{const [id,,d,name]=n;const st=stateAt(sc,n,t);const x=nx(d),y=ny(i);
-    if(!st){s+=`<text x="${x-4}" y="${y+4}" font-size="11.5" fill="var(--muted)" opacity=".35">${id}</text>`;return;}
-    const col=LCOL[st],filled=st==="pt"||st==="pw";
-    const dash=st==="split"?' stroke-dasharray="3 2"':st==="super"?' stroke-dasharray="1.5 2"':"";
-    s+=`<circle cx="${x}" cy="${y}" r="6" fill="${filled?col:st==="out"?"var(--wait)":"var(--panel)"}" stroke="${col}" stroke-width="2"${dash}/>`;
-    const lx=x+12,max=Math.floor((296-lx-36)/6.6);const nm=name.length>max?name.slice(0,max-1)+"…":name;
-    s+=`<text x="${lx}" y="${y+4}" font-size="11.5" fill="var(--ink)"${st==="super"?' text-decoration="line-through" opacity=".6"':""}>${id} <tspan fill="var(--muted)">${nm}</tspan></text>`;
-    s+=`<text x="${TW-2}" y="${y+4}" font-size="11" fill="${col}" text-anchor="end" font-weight="500">${LBL[st]}</text>`;});
-  for(let k=1;k<=sc.slots;k++){const cur=sc.SL.find(([kk,,a,,e])=>kk===k&&t>=a&&t<e);
-    s+=`<text x="12" y="${sy(k)+4}" font-size="11.5" fill="${cur?"var(--worker)":"var(--muted)"}">${cur?"holds "+cur[1]:"free"}</text>`;}
-  g("wtree").innerHTML=s;
-}
-function setT(t){
-  T=Math.max(0,Math.min(END,t));const {sc}=ctx;
-  g("wslider").value=T;g("wpastr").setAttribute("width",xt(T));
-  g("wph").setAttribute("x1",xt(T));g("wph").setAttribute("x2",xt(T));
-  g("wclock").textContent=`${clock(T)} UTC · ${since(T)}`;
-  drawTree(T);
-  let k=-1;sc.EV.forEach((e,i)=>{if(e[0]<=T+1e-9)k=i});
-  g("wcap").textContent=k>=0?`${clock(sc.EV[k][0])} · ${sc.EV[k][2]}`:"";
-  [...g("wlog").children].forEach((li,i)=>li.classList.toggle("cur",i===k));
-}
-function stop(){if(raf)cancelAnimationFrame(raf);raf=null;g("wplay").textContent="▶ Play"}
-function tick(ts){if(last)setT(T+(ts-last)/1000*(END/45));last=ts;if(T>=END){stop();return}raf=requestAnimationFrame(tick)}
-g("wplay").onclick=()=>{if(raf){stop();return}if(T>=END)setT(0);last=0;g("wplay").textContent="❚❚ Pause";raf=requestAnimationFrame(tick)};
-g("wslider").addEventListener("input",e=>{stop();setT(+e.target.value)});
-g("wlog").addEventListener("click",e=>{const b=e.target.closest("button");if(b){stop();setT(ctx.sc.EV[+b.dataset.i][0]+0.05)}});
+["o005","o003",2,"cospherical_of_angle_sum_of_opposite_sides",73.9,93.0,"tree",null]],
+O:[
+["o001-1",27.7,28.2,92.5,94.4,"landed"],["o002-1",27.7,28.2,126.0,127.9,"landed"],["o003-1",27.7,null,null,32.7,"untaken"],
+["o004-2",74.4,null,null,79.4,"untaken"],["o005-2",74.4,null,null,79.4,"untaken"],["o009-1",115.6,116.1,null,136.2,"withdrawn"],
+["o010-1",115.6,null,null,120.6,"untaken"]],
+SL:[[1,"o001-1",28.2,92.5,94.4,"landed"],[1,"o009-1",116.1,136.2,136.2,"withdrawn"],[2,"o002-1",28.2,126.0,127.9,"landed"]],
+EV:[
+[0.0,"tree","The tree starts on root: its own PROVE and DEC sessions.","树开始处理 root：自己的 PROVE 和 DEC session。"],
+[27.7,"tree","Root is split into o001–o003; three orders go out.","root 拆成 o001–o003；三张工单发出。"],
+[28.2,"worker","The worker takes o001-1 in slot 1 and o002-1 in slot 2.","worker 用 slot 1 接 o001-1，slot 2 接 o002-1。"],
+[32.7,"tree","o003 untaken: the tree's for good.","o003 无人认领：永久归树。"],
+[73.9,"tree","o003 is split into o004, o005; both go out, but both slots are busy.","o003 拆成 o004、o005；都发出，但两个 slot 都忙。"],
+[79.4,"tree","o004, o005 untaken.","o004、o005 无人认领。"],
+[93.0,"tree","The tree proves o005.","树证明了 o005。"],
+[94.4,"worker","Slot 1: o001 lands. Slot 1 is free.","slot 1：o001 落地，slot 1 空出。"],
+[115.6,"tree","o004 is split into o009, o010. Slot 1 takes o009; slot 2 is still on o002.","o004 拆成 o009、o010。slot 1 接 o009；slot 2 仍在做 o002。"],
+[120.6,"tree","o010 untaken.","o010 无人认领。"],
+[127.9,"worker","Slot 2: o002 lands after 98 min of worker time.","slot 2：o002 在 worker 用时 98 分钟后落地。"],
+[136.2,"tree","The tree proves o004 outright: o009, o010 superseded; slot 1's o009 withdrawn.","树直接证明了 o004：o009、o010 被取代；slot 1 的 o009 撤单。"],
+[138.2,"tree","o003 proved through its split; with o001, o002 done, root is proved.","o003 通过拆分得证；加上 o001、o002，root 得证。"],
+[143.1,"tree","Final review done: proved in about 2h23m.","最终复核完成：约 2h23m 证明。"]]
+});
 
-build();setT(END);
-})();
+setLang(LANG);
 </script>
 </body>
 </html>
