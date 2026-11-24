@@ -239,6 +239,7 @@ const PLAY=()=>$t("&#9654; Play","&#9654; 播放"), PAUSE=()=>$t("&#10074;&#1007
   <div class="panel" style="display:flex;flex-direction:column;gap:10px">
     <div class="rp-controls">
       <button id="v5-play" type="button">&#9654; Play</button>
+      <label class="muted"><span lang="en">speed</span><span lang="zh">速度</span> <select id="v5-speed"><option value="5">5 min/s</option><option value="10" selected>10 min/s</option><option value="20">20 min/s</option><option value="40">40 min/s</option></select></label>
       <input id="v5-slider" type="range" min="0" max="720" step="1" value="720" aria-label="time">
       <span id="v5-time" class="mono">12:00</span>
     </div>
@@ -251,17 +252,17 @@ const PLAY=()=>$t("&#9654; Play","&#9654; 播放"), PAUSE=()=>$t("&#10074;&#1007
 <section id="versions">
   <h2><span lang="en">Results by version (hidden set, Kimi-K3-relative, 50 = Kimi K3)</span><span lang="zh">各版本结果（隐藏集，Kimi-K3 相对分，50 = Kimi K3）</span></h2>
   <div class="scroll"><table class="tbl">
-    <thead><tr><th><span lang="en">task</span><span lang="zh">任务</span></th><th class="num"><span lang="en">paper DeepSeek</span><span lang="zh">论文 DeepSeek</span></th><th class="num">v2</th><th class="num"><span lang="en">v2 reruns</span><span lang="zh">v2 重跑</span></th><th class="num"><span lang="en">+ Slurm eval</span><span lang="zh">+ Slurm 评测</span></th><th class="num">v3</th><th class="num">v4</th><th class="num">v5</th><th class="num"><span lang="en">paper GPT-6 Astra</span><span lang="zh">论文 GPT-6 Astra</span></th></tr></thead>
+    <thead><tr><th><span lang="en">task</span><span lang="zh">任务</span></th><th class="num"><span lang="en">paper DeepSeek</span><span lang="zh">论文 DeepSeek</span></th><th class="num"><span lang="en">v2 (mean of 3 runs)</span><span lang="zh">v2（3 次平均）</span></th><th class="num"><span lang="en">+ Slurm eval</span><span lang="zh">+ Slurm 评测</span></th><th class="num">v3</th><th class="num">v4</th><th class="num">v5</th><th class="num"><span lang="en">paper GPT-6 Astra</span><span lang="zh">论文 GPT-6 Astra</span></th></tr></thead>
     <tbody>
-      <tr><td><code>ahc058</code></td><td class="num">47.9</td><td class="num">81.6</td><td class="num">78.3 / 79.0</td><td class="num">79.0</td><td class="num">76.1</td><td class="num">80.2</td><td class="num"><b>83.8</b></td><td class="num">83.8</td></tr>
-      <tr><td><code>christmas</code></td><td class="num">66.8</td><td class="num">67.6</td><td class="num">58.9 / 66.4</td><td class="num">68.1</td><td class="num">69.5</td><td class="num">70.6</td><td class="num"><b>72.0</b></td><td class="num">85.4</td></tr>
-      <tr><td><code>curriculum</code></td><td class="num">46.0</td><td class="num">67.1</td><td class="num">60.3 / 58.8</td><td class="num">77.1</td><td class="num"><b>87.3</b></td><td class="num">86.6</td><td class="num">85.8</td><td class="num">88.9</td></tr>
-      <tr><td><code>glasscut</code></td><td class="num">29.1</td><td class="num">40.2</td><td class="num">5.5 / 30.6</td><td class="num">15.6</td><td class="num">52.5</td><td class="num">52.0</td><td class="num"><b>80.9</b></td><td class="num">98.5</td></tr>
-      <tr><td><code>tw</code></td><td class="num">52.9</td><td class="num">50.8</td><td class="num">38.7 / 58.0</td><td class="num">48.3</td><td class="num">63.4</td><td class="num">56.1</td><td class="num"><b>67.1</b></td><td class="num">87.7</td></tr>
-      <tr><td><b><span lang="en">mean</span><span lang="zh">平均</span></b></td><td class="num">48.5</td><td class="num">61.5</td><td class="num">48.3 / 58.6</td><td class="num">57.6</td><td class="num">69.8</td><td class="num">69.1</td><td class="num"><b>77.9</b></td><td class="num">88.9</td></tr>
+      <tr><td><code>ahc058</code></td><td class="num">47.9</td><td class="num">79.6</td><td class="num">79.0</td><td class="num">76.1</td><td class="num">80.2</td><td class="num"><b>83.8</b></td><td class="num">83.8</td></tr>
+      <tr><td><code>christmas</code></td><td class="num">66.8</td><td class="num">64.3</td><td class="num">68.1</td><td class="num">69.5</td><td class="num">70.6</td><td class="num"><b>72.0</b></td><td class="num">85.4</td></tr>
+      <tr><td><code>curriculum</code></td><td class="num">46.0</td><td class="num">62.1</td><td class="num">77.1</td><td class="num"><b>87.3</b></td><td class="num">86.6</td><td class="num">85.8</td><td class="num">88.9</td></tr>
+      <tr><td><code>glasscut</code></td><td class="num">29.1</td><td class="num">25.4</td><td class="num">15.6</td><td class="num">52.5</td><td class="num">52.0</td><td class="num"><b>80.9</b></td><td class="num">98.5</td></tr>
+      <tr><td><code>tw</code></td><td class="num">52.9</td><td class="num">49.2</td><td class="num">48.3</td><td class="num">63.4</td><td class="num">56.1</td><td class="num"><b>67.1</b></td><td class="num">87.7</td></tr>
+      <tr><td><b><span lang="en">mean</span><span lang="zh">平均</span></b></td><td class="num">48.5</td><td class="num">56.1</td><td class="num">57.6</td><td class="num">69.8</td><td class="num">69.1</td><td class="num"><b>77.9</b></td><td class="num">88.9</td></tr>
     </tbody>
   </table></div>
-  <p class="foot"><span lang="en">DeepSeek V4.1 Flash (1017) everywhere, 12 effective hours per task, one run per column (the paper: one session, mean of 3 runs). v3&ndash;v5 use 10 IMPROVE sessions per tree (earlier: 3): more compute than the paper's single session. Single runs vary by 10 points or more; two more v5 runs are in progress.</span><span lang="zh">全部使用 DeepSeek V4.1 Flash (1017)，每题 12 小时有效时间，每列跑一次（论文为单 session、3 次平均）。v3&ndash;v5 每棵树 10 个 IMPROVE（之前 3 个），算力多于论文的单 session。单次运行的波动可达 10 分以上；v5 另外两遍正在运行。</span></p>
+  <p class="foot"><span lang="en">DeepSeek V4.1 Flash (1017) everywhere, 12 effective hours per task; v2 is the mean of 3 runs (61.5, 48.3, 58.6), every other LOT-I column one run (the paper: one session, mean of 3 runs). v3&ndash;v5 use 10 IMPROVE sessions per tree (earlier: 3): more compute than the paper's single session. Single runs vary by 10 points or more; two more v5 runs are in progress.</span><span lang="zh">全部使用 DeepSeek V4.1 Flash (1017)，每题 12 小时有效时间；v2 为 3 次运行的平均（61.5、48.3、58.6），其余 LOT-I 各列各跑一次（论文为单 session、3 次平均）。v3&ndash;v5 每棵树 10 个 IMPROVE（之前 3 个），算力多于论文的单 session。单次运行的波动可达 10 分以上；v5 另外两遍正在运行。</span></p>
 </section>
 
 <section id="replay">
@@ -722,7 +723,7 @@ function draw() {
     k($t("sent back for revision", "要求修改"), evs.filter(e => e.k === "revise").length) +
     k($t("new variants", "新变体"), evs.filter(e => e.k === "approved").length) +
     k($t("champion", "champion"), cur ? `${cur.v}${cur.ho != null ? " · " + cur.ho.toFixed(4) : ""}` : "-");
-  document.getElementById("v5-time").textContent = hh(T);
+  document.getElementById("v5-time").textContent = hh(Math.floor(T));
   document.getElementById("v5-slider").value = T;
   document.getElementById("v5-leg").innerHTML = $t(
     `<b style="color:var(--tree)">●</b> proposed &nbsp; <b style="color:var(--warn)">◆</b> sent back for revision &nbsp; <b style="color:var(--ok)">●</b> approved &rarr; new variant (green bar while it lives) &nbsp; <b style="color:var(--bad)">✕</b> rejected. Large blue dots on the top line: the champion is an ARCH variant. Time is effective (pauses removed).`,
@@ -735,7 +736,7 @@ btn.addEventListener("click", () => {
   if (timer) return stop();
   if (T >= END) T = 0;
   btn.innerHTML = PAUSE();
-  timer = setInterval(() => { T = Math.min(END, T + 6); draw(); if (T >= END) stop(); }, 50);
+  timer = setInterval(() => { T = Math.min(END, T + (+document.getElementById("v5-speed").value) / 20); draw(); if (T >= END) stop(); }, 50);
 });
 sl.addEventListener("input", () => { stop(); T = +sl.value; draw(); });
 LANG_CB.push(() => { btn.innerHTML = timer ? PAUSE() : PLAY(); draw(); });
