@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>*{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}</style>
+<title>Why Cited Theorems Get Rejected</title>
+<meta name="description" content="First Proof batch 3 with literature lemmas: why 240 of 1154 literature citations were rejected although the paper was found, with real cases.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1b1f27; --ink2:#4a5160; --muted:#7b8292; --line:#dde1e8;
+  --acc:#3d55c4; --acc-soft:#e8ecfb; --ok:#1f7a3a; --ok-soft:#e3f3e8; --bad:#b3261e; --bad-soft:#fbe9e7;
+  --warn:#a2610c; --warn-soft:#fbf0de; --bar:#3d55c4; --bar2:#9aa7e0; --bar3:#c9d0ef;
+  --sans:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d;
+  --acc:#8399f2; --acc-soft:#222a45; --ok:#5cc47a; --ok-soft:#18301f; --bad:#f08a80; --bad-soft:#3a1f1d;
+  --warn:#e0a24a; --warn-soft:#33281a; --bar:#8399f2; --bar2:#5866a3; --bar3:#363f66; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d;
+  --acc:#8399f2; --acc-soft:#222a45; --ok:#5cc47a; --ok-soft:#18301f; --bad:#f08a80; --bad-soft:#3a1f1d;
+  --warn:#e0a24a; --warn-soft:#33281a; --bar:#8399f2; --bar2:#5866a3; --bar3:#363f66; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.65 var(--sans)}
+.wrap{max-width:980px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:56px}
+h1{font-size:30px;line-height:1.25;margin:0;font-weight:600;text-wrap:balance}
+h2{font-size:21px;margin:0;font-weight:600;text-wrap:balance}
+h3{font-size:15.5px;margin:0;font-weight:600}
+p{margin:0;max-width:70ch}
+ul,ol{margin:0;padding-left:20px;max-width:70ch}
+li+li{margin-top:4px}
+a{color:var(--acc)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+header{display:flex;flex-direction:column;gap:12px}
+header .lede{color:var(--ink2);font-size:16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:500 12px var(--mono);background:var(--panel);color:var(--ink2);border:0;padding:5px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--acc);color:#fff}
+section{display:flex;flex-direction:column;gap:18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font:600 26px/1.1 var(--sans);font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:var(--ink2)}
+.callout{padding:16px 18px;border-left:4px solid var(--acc);background:var(--acc-soft);border-radius:6px;max-width:78ch}
+.checks{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.check{padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.check .n{font:500 12px var(--mono);color:var(--acc)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--ink2);font-size:12.5px}
+td.num,th.num{text-align:right;white-space:nowrap}
+.barcell{min-width:140px}
+.bar{height:10px;border-radius:2px;background:var(--bar)}
+.bar.b2{background:var(--bar2)}.bar.b3{background:var(--bar3)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.cases{display:flex;flex-direction:column;gap:16px}
+.case{padding:18px;display:flex;flex-direction:column;gap:12px}
+.case .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.tag{font:500 11.5px var(--mono);padding:2px 8px;border-radius:4px;background:var(--acc-soft);color:var(--acc);white-space:nowrap}
+.meta{font:12px var(--mono);color:var(--muted);word-break:break-word}
+.lean{font:12px/1.55 var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+blockquote{margin:0;padding:10px 14px;border-left:3px solid var(--bad);background:var(--bad-soft);border-radius:0 6px 6px 0;font-size:13.5px;max-width:none}
+.outcome{font-size:13px;padding:6px 10px;border-radius:6px;display:inline-block}
+.outcome.fixed{background:var(--ok-soft);color:var(--ok)}
+.outcome.ruled{background:var(--warn-soft);color:var(--warn)}
+.outcome.open{background:var(--bad-soft);color:var(--bad)}
+.why{color:var(--ink2);font-size:14px}
+.small{font-size:13px;color:var(--ink2)}
+html[data-lang="zh"] body [lang="en"],html:not([data-lang="zh"]) body [lang="zh"]{display:none!important}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}.checks{grid-template-columns:1fr}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="top">
+    <span class="eyebrow">First Proof batch 3 · LOT with literature lemmas · Nov 2026</span>
+    <span class="seg" role="group" aria-label="Language"><button data-l="en">EN</button><button data-l="zh">中文</button></span>
+  </div>
+  <h1><span lang="en">The paper was found. Why was the citation still rejected?</span><span lang="zh">论文找到了，为什么引用还是被拒？</span></h1>
+  <p class="lede" lang="en">In the fp3-lit experiment, LOT proof trees for First Proof problems P06, P08 and P09v2 may leave a lemma as <code>sorry</code> if it is a published human theorem. Each such lemma goes to an independent literature reviewer. Of 1,154 reviews, 240 were rejected, and in every one of them the reviewer did find the cited paper or book. This page explains what made those citations unusable, with real cases.</p>
+  <p class="lede" lang="zh">在 fp3-lit 实验里，First Proof 第 P06、P08、P09v2 题的 LOT 证明树可以把"已发表的人类定理"留作 <code>sorry</code>。每条这样的引理都要交给独立的文献审稿 agent 审核。1,154 次审核中有 240 次被拒，而这 240 次里审稿人<b>每一次都找到了</b>被引用的论文或书。本页说明这些引用为什么仍然不能用，并给出真实案例。</p>
+</header>
+
+<section>
+  <div class="kpis">
+    <div class="panel kpi"><b>1,154</b><span lang="en">literature reviews</span><span lang="zh">次文献审核</span></div>
+    <div class="panel kpi"><b>914</b><span lang="en">approved (79%)</span><span lang="zh">通过（79%）</span></div>
+    <div class="panel kpi"><b>240</b><span lang="en">rejected (21%)</span><span lang="zh">被拒（21%）</span></div>
+    <div class="panel kpi"><b>0</b><span lang="en">rejected because no source was found</span><span lang="zh">因为找不到出处而被拒</span></div>
+  </div>
+  <div class="callout">
+    <p lang="en"><b>Short answer.</b> The reviewers almost never doubted the mathematics: 131 of the 240 rejections say explicitly that they do not claim the Lean statement is false. They rejected the <i>translation</i>. In about 80% of rejections, the Lean lemma talks about the problem's own hand-built objects, a different definition, or a different category than the source. Bridging that gap is a theorem in its own right, and the rules forbid hiding a second theorem inside one citation.</p>
+    <p lang="zh"><b>一句话：</b>审稿人几乎从不怀疑数学本身：240 次拒绝里有 131 次明确说"不是说这个 Lean 命题是假的"。他们拒绝的是<i>翻译</i>。约 80% 的拒绝里，Lean 引理讲的是题目自己手搭的对象、另一种定义，或另一个范畴（拓扑 vs 光滑/PL），而不是论文里的对象。把两者对上本身就是一条定理，而规则不允许把第二条定理藏进一次引用里。</p>
+  </div>
+</section>
+
+<section>
+  <h2><span lang="en">What the reviewer checks</span><span lang="zh">审稿人检查什么</span></h2>
+  <p class="small" lang="en">Each proposed literature lemma is reviewed by a separate codex session (gpt-6.1-sol, max effort, with web access). It reads the source itself and returns <code>approved</code> or <code>rejected</code> with a reason, the source URL and a verbatim quote. A lemma is approved only if all four checks pass:</p>
+  <p class="small" lang="zh">每条文献引理由一个独立的 codex session（gpt-6.1-sol，max effort，可联网）审核。它必须亲自读原文，输出 <code>approved</code> 或 <code>rejected</code>，附理由、原文链接和逐字引文。四条检查全部通过才算通过：</p>
+  <div class="checks">
+    <div class="panel check"><span class="n">1 · EXISTS</span><span lang="en">The cited theorem exists under the cited number, read in the source itself.</span><span lang="zh">被引定理确实以所引编号存在，并且是在原文中亲自读到的。</span></div>
+    <div class="panel check"><span class="n">2 · ONE THEOREM</span><span lang="en">One source, one numbered result, or a direct, routine reformulation of it. A chain of results, or a theorem plus a non-trivial argument, is rejected.</span><span lang="zh">一个出处、一条编号结果，或它直接、常规的改写。多个结果串起来，或"定理 + 非平凡论证"，都拒绝。</span></div>
+    <div class="panel check"><span class="n">3 · IMPLIES THE LEAN</span><span lang="en">Under the problem's own <code>ChallengeDeps.lean</code> definitions the source implies the Lean statement: no missing hypotheses, no stronger conclusion, the hand-made objects are the source's objects, degenerate cases hold.</span><span lang="zh">在题目自己的 <code>ChallengeDeps.lean</code> 定义下，原文能推出这个 Lean 命题：不缺假设、结论不更强、手搭对象就是原文的对象、退化情形也成立。</span></div>
+    <div class="panel check"><span class="n">4 · NOT THE PROBLEM</span><span lang="en">The lemma is not the problem itself (this never triggered).</span><span lang="zh">引理不能就是题目本身（这一条从未触发）。</span></div>
+  </div>
+  <p class="small" lang="en">Check 2 is the one that bites: 227 of the 240 rejection reasons invoke the one-theorem / "routine reformulation" rule. 226 of them also propose an acceptable repair.</p>
+  <p class="small" lang="zh">真正卡人的是第 2 条：240 条拒绝理由里有 227 条援引了"一条定理 / 常规改写"规则。其中 226 条同时给出了可接受的修改建议。</p>
+</section>
+
+<section>
+  <h2><span lang="en">Per problem</span><span lang="zh">分题统计</span></h2>
+  <div class="tbl panel">
+  <table>
+    <thead><tr><th lang="en">Problem</th><th lang="zh">题目</th><th class="num" lang="en">Reviews</th><th class="num" lang="zh">审核数</th><th class="num" lang="en">Approved</th><th class="num" lang="zh">通过</th><th class="num" lang="en">Rejected</th><th class="num" lang="zh">被拒</th><th class="num" lang="en">Reject rate</th><th class="num" lang="zh">拒绝率</th><th lang="en">Outcome</th><th lang="zh">结果</th></tr></thead>
+    <tbody>
+      <tr><td>P06</td><td class="num">538</td><td class="num">430</td><td class="num">108</td><td class="num">20%</td><td lang="en">running</td><td lang="zh">进行中</td></tr>
+      <tr><td>P08</td><td class="num">115</td><td class="num">109</td><td class="num">6</td><td class="num">5%</td><td lang="en"><b>proved</b> (7 literature lemmas)</td><td lang="zh"><b>已证明</b>（7 条文献引理）</td></tr>
+      <tr><td>P09v2</td><td class="num">501</td><td class="num">375</td><td class="num">126</td><td class="num">25%</td><td lang="en">running</td><td lang="zh">进行中</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small" lang="en">The rate tracks how the problem was formalized. P08's definitions are close to textbook ones. P06 builds Heegaard Floer invariants from grids and polygons by hand, and P09v2 builds the moduli space <code>MBar</code> and Teichmüller spaces as hand-made quotients. Counts are of the review directories on disk, which are keyed by statement hash, so a re-review replaces the earlier verdict. P08's log shows 13 rejection events: 7 were later re-reviewed and 6 of those flipped to approved after an operator ruling (case 1).</p>
+  <p class="small" lang="zh">拒绝率跟题目的形式化方式走。P08 的定义接近教科书。P06 用网格和多边形手搭了 Heegaard Floer 不变量，P09v2 把模空间 <code>MBar</code> 和 Teichmüller 空间做成了手搭的商空间。表中是磁盘上的审核目录数，按命题哈希存放，重审会覆盖旧结论。P08 的日志里共有 13 次拒绝：其中 7 次后来被重审，有 6 次在人工裁定后翻成了通过（见案例 1）。</p>
+</section>
+
+<section>
+  <h2><span lang="en">Why found citations fail: the 240 rejections</span><span lang="zh">找到了出处却失败的原因：240 次拒绝</span></h2>
+  <div class="legend"><span><i style="background:var(--bar)"></i>P06</span><span><i style="background:var(--bar2)"></i>P08</span><span><i style="background:var(--bar3)"></i>P09v2</span></div>
+  <div class="tbl panel">
+  <table id="tax">
+    <thead><tr><th lang="en">Failure mode</th><th lang="zh">失败类型</th><th class="num">P06</th><th class="num">P08</th><th class="num">P09v2</th><th class="num" lang="en">Total</th><th class="num" lang="zh">合计</th><th class="barcell"></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <p class="small" lang="en">One primary label per rejection, assigned by hand from the decisive sentences of each reason. The boundary between the first three rows is partly a judgement call. All three describe the same thing: the theorem is right, but the Lean statement is not about the source's objects.</p>
+  <p class="small" lang="zh">每次拒绝按其关键句人工标注一个主类别。前三类的边界有一定主观性，但三者讲的是同一件事：定理没错，可 Lean 命题讲的不是原文的对象。</p>
+</section>
+
+<section>
+  <h2><span lang="en">Real cases</span><span lang="zh">真实案例</span></h2>
+  <p class="small" lang="en">Quotes are verbatim from the reviewers' <code>verdict.json</code>, except case 1, whose pre-ruling verdict was overwritten and survives only as a 200-character log line. Lean statements are abridged. The review key (statement hash) is shown for each case.</p>
+  <p class="small" lang="zh">引文逐字摘自审稿人的 <code>verdict.json</code>（保留英文原文）。唯一例外是案例 1：它在裁定前的结论已被覆盖，只剩一条 200 字符的日志。Lean 命题有删节，每个案例都标出了审核 key（命题哈希）。</p>
+  <div class="cases" id="cases"></div>
+</section>
+
+<section>
+  <h2><span lang="en">What fixed them</span><span lang="zh">怎么修好的</span></h2>
+  <p lang="en">24 lemma names (9 in P06, 2 in P08, 13 in P09v2) were rejected and later approved in some form. The repairs were almost always local:</p>
+  <p lang="zh">有 24 个引理名（P06 9 个、P08 2 个、P09v2 13 个）先被拒、后来以某种形式通过。修法几乎都是局部的：</p>
+  <ul lang="en">
+    <li><b>Fix the number:</b> cite the theorem that actually says it (case 5).</li>
+    <li><b>Add the hypothesis hidden in the source's definitions:</b> connectedness for Lee's covering maps (case 4).</li>
+    <li><b>Fix the Lean encoding:</b> <code>⊤</code> → <code>(↑⊤)</code>, so C<sup>ω</sup> becomes C<sup>∞</sup> (case 3).</li>
+    <li><b>Switch to a source in the right setting:</b> abstract rather than embedded manifolds, topological rather than smooth (cases 6, 7, 11).</li>
+    <li><b>Restate in the source's own definitions:</b> e.g. quasiconformality in the W<sup>1,2</sup> form that Koskela–Wildrick prove (case 10).</li>
+  </ul>
+  <ul lang="zh">
+    <li><b>改编号：</b>引用真正说这件事的那条定理（案例 5）。</li>
+    <li><b>补上藏在原文定义里的假设：</b>例如 Lee 的覆叠映射要求连通（案例 4）。</li>
+    <li><b>修 Lean 写法：</b><code>⊤</code> → <code>(↑⊤)</code>，即 C<sup>ω</sup> 改为 C<sup>∞</sup>（案例 3）。</li>
+    <li><b>换一个设定匹配的出处：</b>抽象流形而非嵌入流形、拓扑范畴而非光滑范畴（案例 6、7、11）。</li>
+    <li><b>改用原文自己的定义来陈述：</b>例如按 Koskela–Wildrick 证明的 W<sup>1,2</sup> 形式表述拟共形（案例 10）。</li>
+  </ul>
+  <p lang="en">What could <i>not</i> be fixed locally is the bespoke-object gap (cases 8, 9). Equating a grid/polygon model with genuine HF-hat, or a hand-made quotient <code>MBar</code> with (M̄<sub>g</sub>)<sup>an</sup>, is a research-level comparison theorem. No single citation covers it, so the tree has to prove that bridge or route around it.</p>
+  <p lang="zh">无法局部修好的是"手搭对象"这一类（案例 8、9）。证明网格/多边形模型等于真正的 HF-hat，或手搭的商空间 <code>MBar</code> 等于 (M̄<sub>g</sub>)<sup>an</sup>，本身就是研究级的比较定理。没有哪一次引用能覆盖它，证明树只能自己证明这座桥，或者绕开它。</p>
+</section>
+
+<section>
+  <h2><span lang="en">Other observations</span><span lang="zh">其他观察</span></h2>
+  <ul lang="en">
+    <li><b>The reviewer is not deterministic.</b> In case 2 the same elaborated statement, byte for byte, was rejected at 11:30Z and approved at 12:19Z. <code>irreducible_prime</code> was approved once and rejected five times. Strictness about the smooth-vs-topological category varies between sessions.</li>
+    <li><b>Only one convention gap was waived, and it took a human.</b> P08's final proof rests on Forni Thm 3.10, approved under an explicit operator ruling (case 1). Everything else in that ruling was still checked as usual.</li>
+    <li><b>The reviewers found real bugs in the problem's own docstrings.</b> Four independent P09v2 reviews built the same counterexample (the radial map exp(−1/|z|²)·z/|z|). It refutes a docstring's claim that the problem's chart-dependent circular dilatation is invariant under conformal chart changes.</li>
+    <li><b>Read the elaborated statement, not the comment.</b> P08's <code>frechet_open_mapping</code> was rejected because what Lean elaborated was stronger than what LEMMA.md said. The written version would have passed.</li>
+    <li><b>Paywalls count as rejections.</b> Five rejections came from full texts the reviewer could not open (case 13). The rules require reading the theorem in the source.</li>
+  </ul>
+  <ul lang="zh">
+    <li><b>审稿结果不是确定性的。</b>案例 2 里，逐字节相同的同一个 elaborated 命题 11:30Z 被拒、12:19Z 被通过。<code>irreducible_prime</code> 通过 1 次、被拒 5 次。不同 session 对"光滑 vs 拓扑范畴"的严格程度不一样。</li>
+    <li><b>只有一个约定差异被豁免，而且需要人来拍板。</b>P08 的最终证明依赖 Forni Thm 3.10，是在一条明确的人工裁定下通过的（案例 1）。裁定之外的部分照常检查。</li>
+    <li><b>审稿人发现了题目自身 docstring 的真实错误。</b>P09v2 有 4 次独立审核构造出了同一个反例（径向映射 exp(−1/|z|²)·z/|z|）。它否定了 docstring 里"依赖坐标卡的圆周伸缩在共形换卡下不变"的说法。</li>
+    <li><b>要看 elaborate 之后的命题，不能只看注释。</b>P08 的 <code>frechet_open_mapping</code> 被拒，是因为 Lean 实际 elaborate 出的命题比 LEMMA.md 里写的更强。按写的版本本来能过。</li>
+    <li><b>付费墙也会导致被拒。</b>有 5 次拒绝是因为打不开全文（案例 13）。规则要求必须在原文里读到定理。</li>
+  </ul>
+  <p class="small" lang="en">Method: all 1,154 <code>verdict.json</code> files from <code>runs/fp3lit-{p06,p08,p09v2}/litreview/</code> plus the litreview log events, read on 2026-11-24. Rejection quotes were checked against the files on disk. The flag counts (e.g. "131 say not false") come from regular expressions and are approximate.</p>
+  <p class="small" lang="zh">方法：读取 <code>runs/fp3lit-{p06,p08,p09v2}/litreview/</code> 下全部 1,154 个 <code>verdict.json</code> 以及 litreview 日志事件（2026-11-24）。拒绝引文已与磁盘上的文件核对。"131 条说不是假命题"之类的计数来自正则匹配，为近似值。</p>
+</section>
+
+</div>
+
+<script>
+var TAX=[
+ ["Bespoke-object identification gap","手搭对象无法与标准对象等同",50,0,63,"The Lean statement is about the problem's hand-built stand-ins (grid/polygon HF-hat and HFK in P06; MBar, StableFamily and Quot Teichmüller spaces in P09v2). Proving that they equal the standard objects is itself a theorem.","Lean 命题讲的是题目手搭的替身（P06 的网格/多边形 HF-hat、HFK；P09v2 的 MBar、StableFamily、Quot Teichmüller 空间）。证明它们等于标准对象本身就是定理。"],
+ ["Definition variant of a standard notion","标准概念的另一种定义",1,0,47,"For example quasiconformal maps defined geometrically, metrically or analytically (ACL/W<sup>1,2</sup>); homotopy vs isotopy; different definitions of Stein or of local dimension.","例如拟共形映射的几何、度量、解析（ACL/W<sup>1,2</sup>）定义；同伦 vs 同痕；Stein、局部维数的不同定义。"],
+ ["Category / setting mismatch","范畴/设定不匹配",28,1,1,"The source works in the smooth or PL category, or with embedded manifolds; the Lean statement is topological or abstract.","原文在光滑或 PL 范畴，或针对嵌入流形；Lean 命题是拓扑的或抽象的。"],
+ ["Conclusion exceeds the theorem / bundles results","结论超出定理 / 捆绑多个结果",15,0,6,"Extra conjuncts, a van Kampen-type argument folded in, or Lean <code>⊤</code> meaning C<sup>ω</sup>.","多出的合取项、夹带 van Kampen 式论证，或 Lean 的 <code>⊤</code> 实际表示 C<sup>ω</sup>。"],
+ ["Missing source hypothesis","缺少原文假设",3,5,3,"A standing assumption, or a condition hidden inside a definition of the source.","原文的全局假设，或藏在原文某个定义里的条件。"],
+ ["Wrong citation / the number says something else","引用错误 / 编号对应的是别的结论",7,0,2,"Hatcher Prop 1.4 is the converse direction (cited 5 times); Rolfsen numbering errors.","Hatcher Prop 1.4 是逆命题（被引 5 次）；Rolfsen 的编号错误。"],
+ ["Source not accessible","原文无法访问",3,0,2,"Paywalled full text; the theorem could not be read.","全文在付费墙后，读不到定理。"],
+ ["Elaborated Lean ≠ written statement","elaborate 后的 Lean ≠ 书面陈述",0,0,2,"What Lean elaborated differs from what LEMMA.md says.","Lean 实际 elaborate 出的命题与 LEMMA.md 所写不同。"],
+ ["Lean statement false as stated","Lean 命题本身是假的",1,0,0,"An encoding bug; the source is correct.","形式化写错了；原文没错。"]
+];
+var CASES=[
+ {n:1,p:"P08",k:"e1a29a57 (+6 sibling keys)",name:"scalar_gh_cohomology_free",tag:["Convention gap → operator ruling","约定差异 → 人工裁定"],
+  src:"D. Damjanović, J. Anal. Math. 129 (2016), arXiv:1307.3661, Prop. 2.3; finally Forni, Contemp. Math. 469 (2008), Thm 3.10",
+  url:"https://arxiv.org/pdf/1307.3661",
+  lean:"… [CompactSpace M] [ConnectedSpace M] (X …), IsSmoothVectorField X → ∀ μ, IsSmoothPositiveDensity μ → ∀ δ, IsDivergence μ X δ →\n  IsGloballyHypoelliptic μ X δ → ∀ f, ∃ u c, ∀ x, lieDeriv X u x = f x - c",
+  q:"Proposition 2.3 exists on p. 4 of the cited arXiv version, but the submission does not match its hypotheses and distribution convention. Section 2.1, p. 3, defines Ker L by D(Lφ)=0 for all smooth φ an… [log line, truncated at 200 characters]",
+  why:["P08's ChallengeDeps defines global hypoellipticity with scalar generalized functions relative to a reference density μ, with a divergence term. Greenfield–Wallach, Forni and Damjanović use currents (generalized measures). All 7 reviews of this step between 03:35Z and 08:16Z rejected it on this gap. The human operator then ruled that the convention difference alone does not block this one step (OPERATOR-RULING-1). Six of the keys were re-reviewed unchanged and approved \"under operator ruling 1\".","P08 的 ChallengeDeps 用相对参考密度 μ 的标量广义函数（带散度项）定义全局亚椭圆；Greenfield–Wallach、Forni、Damjanović 用的是流（广义测度）。03:35Z–08:16Z 之间对这一步的 7 次审核全部因此被拒。随后人工裁定：仅就这一步，约定差异本身不构成拒绝理由（OPERATOR-RULING-1）。其中 6 个 key 原样重审，以 \"under operator ruling 1\" 通过。"],
+  out:["ruled","Approved under operator ruling 1; P08's final proof rests on Forni Thm 3.10.","在人工裁定 1 下通过；P08 最终证明依赖 Forni Thm 3.10。"]},
+ {n:2,p:"P08",k:"dc998945 vs 24a55f18",name:"gh_cohomology_free",tag:["Missing source hypothesis · nondeterminism","缺少原文假设 · 结果不确定"],
+  src:"D. Damjanović, arXiv:1307.3661, Proposition 2.3",url:"https://arxiv.org/pdf/1307.3661",
+  lean:"(elaborated statement byte-identical to case 1)",
+  q:"Proposition 2.3 exists on page 4 of the cited arXiv version, but Section 2.1 (page 3) imposes a standing assumption that Ker L contains a nowhere vanishing smooth volume form, where Ker L consists of distributions D satisfying D(Lf)=0. For L=L_X this requires an invariant smooth volume. The Lean hypothesis hμ provides only a positive reference density; hδ permits nonzero divergence and does not assert invariance.",
+  why:["The source's standing hypothesis (an invariant smooth volume) is the hard part and is absent from the Lean lemma. Citing Prop. 2.3 would therefore assume what needs proving. 49 minutes later, a byte-identical statement and docstring was approved by another session, which read operator ruling 1 as covering the invariant-density issue too.","原文的全局假设（存在不变光滑体积）恰恰是难点，而 Lean 引理里没有它；引用 Prop. 2.3 等于假设了要证的东西。49 分钟后，另一个 session 把逐字节相同的命题和 docstring 判为通过：它认为人工裁定 1 也覆盖了不变密度问题。"],
+  out:["ruled","Same input, opposite verdicts (rejected 11:30Z, approved 12:19Z).","同一输入，相反结论（11:30Z 拒，12:19Z 过）。"]},
+ {n:3,p:"P06",k:"75f34cd8 → 9adef0d7",name:"moise_smoothing",tag:["Conclusion too strong (Lean notation)","结论过强（Lean 写法）"],
+  src:"Aschenbrenner–Friedl–Wilton, GTM 19 (2015), Theorem 3.1 (Moise), p. 211",url:"https://msp.org/gtm/2015/19-1/gtm-v19-n1-p08-p.pdf",
+  lean:"∀ (X : Type) [TopologicalSpace X], IsClosed3Manifold X →\n  ∃ c, IsManifold (modelWithCornersSelf ℝ (E 3)) ⊤ X        -- fixed: (↑⊤)",
+  q:"Here ⊤ is ω, meaning real analytic, whereas smooth means ∞, the coercion of (⊤ : ℕ∞) into ℕ∞ω. … The elaborated lemma therefore asserts existence of a compatible real-analytic atlas, while the cited bullet guarantees C∞ regularity.",
+  why:["In current Mathlib the smoothness index of IsManifold lives in WithTop ℕ∞, so a bare ⊤ means C<sup>ω</sup>. As typed, the lemma claimed that every closed topological 3-manifold is real-analytic, which is stronger than Moise.","现行 Mathlib 中 IsManifold 的光滑度指标属于 WithTop ℕ∞，单写 ⊤ 表示 C<sup>ω</sup>。照字面，这条引理声称每个闭拓扑 3-流形都有实解析结构，比 Moise 定理更强。"],
+  out:["fixed","Resubmitted with (↑⊤) and approved 50 minutes later.","改成 (↑⊤) 后重交，50 分钟后通过。"]},
+ {n:4,p:"P06",k:"28b8fcc5 → 13d29483",name:"covering_smoothing",tag:["Hypothesis hidden in a definition","藏在定义里的假设"],
+  src:"J. M. Lee, Introduction to Smooth Manifolds, 2nd ed., Prop. 4.40, p. 92",url:"https://julianchaidez.net/materials/reu/lee_smooth_manifolds.pdf",
+  lean:"∀ (Y X : Type) … [ConnectedSpace X] … (p : Y → X), IsCoveringMap p → Surjective p →\n  ∃ c, IsManifold … Y ∧ IsLocalDiffeomorph … p       -- fixed: + [ConnectedSpace Y] [LocallyPathConnectedSpace Y]",
+  q:"However, Lee's definition of a topological covering requires BOTH its total space and its base to be connected and locally path connected: see printed p.91 and Appendix A, printed p.615. Thus connectedness of Y is an implicit hypothesis of the cited proposition. Mathlib's IsCoveringMap does not impose connectedness, and the Lean lemma assumes ConnectedSpace X only.",
+  why:["Same words, different definitions: Lee's \"covering map\" includes connectivity conditions that Mathlib's IsCoveringMap does not.","同一个词，不同的定义：Lee 的 \"covering map\" 自带连通性条件，Mathlib 的 IsCoveringMap 没有。"],
+  out:["fixed","Added the two instance hypotheses; approved.","补上两个实例假设后通过。"]},
+ {n:5,p:"P06",k:"77c701ea → f4961b68",name:"torus_curves_isotopic",tag:["Wrong theorem number","定理编号错误"],
+  src:"D. Rolfsen, Knots and Links, Ch. 2 §C, cited as Theorem 11 (actually Theorem 16, p. 25)",url:"https://webhomes.maths.ed.ac.uk/~v1ranick/papers/rolfsen.pdf",
+  lean:"∀ (f g : C(Circle, Circle × Circle)), IsEmbedding f → IsEmbedding g → f.Homotopic g →\n  ∃ j, Continuous j ∧ (∀ x, j (0, x) = x) ∧ (∀ t, Bijective fun x => j (t, x)) ∧ (fun x => j (1, x)) '' range f = range g",
+  q:"Rejected as cited: Chapter 2, Section C, Theorem 11 is not the claimed result. In the linked original book text (an AMS reprint), Section C item 11 is an EXERCISE on printed page 24 concerning twist homeomorphisms. The ambient-isotopy classification quoted below is Theorem 16 on printed page 25 (PDF page 38). … Correct the citation to Chapter 2, Section C, Theorem 16, p.25; the existing Lean statement would then be acceptable without weakening.",
+  why:["The mathematics is fine; the citation is not. Rule 1 requires the theorem to exist under the cited number.","数学没问题，引用有问题。规则 1 要求定理确实以所引编号存在。"],
+  out:["fixed","Same statement, citation corrected to Theorem 16; approved.","命题不变、改引 Theorem 16 后通过。"]},
+ {n:6,p:"P08",k:"3cdacd95 → c5964d68",name:"compact_one_manifold_circle",tag:["Setting mismatch (embedded vs abstract)","设定不匹配（嵌入 vs 抽象）"],
+  src:"Guillemin–Pollack, Differential Topology (1974), Appendix 2, p. 208",url:"https://web.math.ucsb.edu/~bigelow/books/guillemin_pollack.pdf",
+  lean:"∀ {M} [TopologicalSpace M] [ChartedSpace (Rm 1) M] [IsManifold … (↑⊤) M] [T2Space M]\n  [SecondCountableTopology M] [CompactSpace M] [ConnectedSpace M], Nonempty (M ≃ₜ Circle)",
+  q:"However, the source defines manifolds as smooth subsets of finite-dimensional Euclidean space (p. 3) … The Lean statement instead quantifies over an arbitrary abstract charted space M. … Applying this source requires first proving that the abstract smooth manifold embeds smoothly in some finite-dimensional Euclidean space … That is an additional substantive embedding result, not a routine reformulation of the cit[ed result].",
+  why:["A true textbook classification, but the textbook's manifolds are subsets of ℝ<sup>N</sup>, so reaching the abstract statement also needs Whitney embedding, which is a second theorem.","教科书里的分类定理没错，但书中的流形是 ℝ<sup>N</sup> 的子集；要得到抽象版本还需要 Whitney 嵌入，即第二条定理。"],
+  out:["fixed","Same statement re-cited to Frolík (1962) Thm 1, which is stated for abstract 1-manifolds; approved.","命题不变，改引针对抽象 1-流形的 Frolík (1962) Thm 1 后通过。"]},
+ {n:7,p:"P06",k:"30ef2f9d → 1b3ea21e",name:"prime_decomposition",tag:["Category mismatch (smooth vs topological)","范畴不匹配（光滑 vs 拓扑）"],
+  src:"A. Hatcher, Notes on Basic 3-Manifold Topology, Theorem 1.5, p. 5",url:"https://pi.math.cornell.edu/~hatcher/3M/3M.pdf",
+  lean:"existence of a prime decomposition, and invariance of the number of nonspherical factors,\nfor all closed topological 3-manifolds (CollaredBall / ConnSum quotient gluings, no orientability)",
+  q:"It assumes orientability, and printed p. 1 fixes the smooth category. … Transferring smooth prime decomposition to these objects requires separate results comparing topological 3-manifolds and locally flat decompositions with smooth ones, followed by a proof that the specified quotient gluings and P/D represent the corresponding sums and primes.",
+  why:["P06 builds 3-manifolds, balls and connected sums topologically. Hatcher, Martelli, Burde–Zieschang and Schubert work in the smooth or PL category. Moving between categories in dimension 3 (Moise, Bing, local flatness) is real mathematics.","P06 用拓扑方式搭建 3-流形、球和连通和；Hatcher、Martelli、Burde–Zieschang、Schubert 都在光滑或 PL 范畴。在 3 维里跨范畴（Moise、Bing、局部平坦）是实打实的数学。"],
+  out:["fixed","A topological version citing Hog-Angeloni–Matveev Thm 2 was approved in another obligation.","另一个 obligation 改引 Hog-Angeloni–Matveev Thm 2 的拓扑版本后通过。"]},
+ {n:8,p:"P06",k:"8f023a89",name:"hyperbolic_lspace_filling_reducing_genus",tag:["Bespoke object (combinatorial HF-hat)","手搭对象（组合 HF-hat）"],
+  src:"Hom–Lidman–Zufelt, Reducible surgeries and Heegaard Floer homology, MRL 22 (2015), Theorem 1.3",url:"https://arxiv.org/pdf/1307.5317v2",
+  lean:"niceHFRank := sInf {GridDiagram.homologyRank A.mulVecLin | IsNiceHeegaardMatrix …}\nHasIntegralLSpaceFilling … → reducing slope = 2·seifertGenus − 1",
+  q:"The decisive problem is the replacement of the source's Heegaard Floer invariant by the new local definition niceHFRank. … ChallengeDeps.lean defines homologyRank for EVERY endomorphism as dim(ker A / (im A intersect ker A)); it does not require A squared = 0. Consequently this expression alone does not supply a Floer chain complex or identify its homology with the source's invariant. Calling the construction independently defined HF-hat in the docstring does not establish that identification.",
+  why:["The theorem is applied to a hand-written stand-in for HF-hat: matrices that need not even square to zero. Proving that such a model computes genuine HF-hat is combinatorial Floer theory, a major separate result. This pattern is behind most of P06's bespoke-object rejections.","定理被套在 HF-hat 的手写替身上：那些矩阵甚至不要求平方为零。证明这类模型算出的就是真正的 HF-hat 属于组合 Floer 理论，是另一条大定理。P06 的手搭对象类拒绝大多是这种情况。"],
+  out:["open","Not citable; the bridge must be proved or avoided.","无法靠引用解决；这座桥要么证明，要么绕开。"]},
+ {n:9,p:"P09v2",k:"ab097a56",name:"compact_moduli",tag:["Bespoke object (MBar topology)","手搭对象（MBar 的拓扑）"],
+  src:"J. Schmitt, The moduli space of curves (lecture notes, 2023), Theorem 3.19(c), p. 27",url:"https://johannesschmitt.gitlab.io/ModCurves/Script.pdf",
+  lean:"∀ (g : ℕ), 2 ≤ g → CompactSpace (FirstProofB3.P09.MBar g 0) ∧ T2Space (FirstProofB3.P09.MBar g 0)",
+  q:"The gap is its identification with the topology in ChallengeDeps.lean. There MBar is a quotient of normalization data, and instTopologicalSpaceMBar is defined by testing the maps F.cls for StableFamily g. These are restricted analytic families … A bijection of isomorphism classes alone cannot transfer compactness. Accordingly the submitted statement packages projectivity together with a nontrivial additional comparison, contrary to the one-theorem rule.",
+  why:["\"M̄<sub>g</sub> is compact Hausdorff\" is textbook, but the problem's MBar is a hand-made quotient whose topology is final for a restricted class of analytic families. Projectivity of the algebraic coarse space says nothing about that topology until MBar ≅ (M̄<sub>g</sub>)<sup>an</sup> is proved.","\"M̄<sub>g</sub> 紧且 Hausdorff\" 是教科书结论；但题目的 MBar 是手搭的商空间，拓扑由一类受限的解析族决定。在证明 MBar ≅ (M̄<sub>g</sub>)<sup>an</sup> 之前，代数粗模空间的射影性说明不了这个拓扑。"],
+  out:["open","Not citable as stated.","按现有表述无法引用。"]},
+ {n:10,p:"P09v2",k:"2a3ba9d4, 2ca6ba2a → 3dba191a",name:"metric_to_analytic",tag:["Definition variant (quasiconformal)","定义变体（拟共形）"],
+  src:"Mercer–Stankewitz, Introduction to Quasiconformal Mappings in the Plane (2007), Theorem 7.5, p. 23",url:"https://www.cs.bsu.edu/homepages/rstankewitz/QCMapsIntro.pdf",
+  lean:"AQC := 1 ≤ K ∧ (ACL on every admissible rectangle) ∧ (a.e. derivative L with det L > 0 ∧ ‖L‖² ≤ K det L)\n(∃ K, IsQC K f) → ∃ K, AQC X Y K f",
+  q:"Rejected under the one-numbered-result requirement: the conclusion of Theorem 7.5 uses the paper's geometric definition of K-quasiconformality (Definition 6.11, p. 15, bounding distortion of quadrilateral moduli). The submitted AQC predicate instead demands absolute continuity on lines … The substantive implication from geometric quasiconformality to these analytic properties is a separate numbered result, Lemma 8.3(a-d), p. 24.",
+  why:["Quasiconformality has several classically equivalent definitions (geometric, metric, analytic), and each equivalence is a theorem. Theorem 7.5 proves metric ⇒ geometric, while the Lean wants the analytic form. This is the single most common P09v2 rejection.","拟共形有几种经典的等价定义（几何、度量、解析），每一种等价都是一条定理。Theorem 7.5 证的是度量 ⇒ 几何，而 Lean 要的是解析形式。这是 P09v2 最常见的拒绝原因。"],
+  out:["fixed","Restated in W<sup>1,2</sup> form and re-cited to Koskela–Wildrick (IMRN 2008) Thm 1.1; approved.","改用 W<sup>1,2</sup> 形式表述，改引 Koskela–Wildrick（IMRN 2008）Thm 1.1 后通过。"]},
+ {n:11,p:"P06",k:"b582c9e6 (+4) → 30777373",name:"irreducible_prime",tag:["The number says the converse","编号对应的是逆命题"],
+  src:"A. Hatcher, Notes on Basic 3-Manifold Topology, Proposition 1.4, p. 4",url:"https://pi.math.cornell.edu/~hatcher/3M/3M.pdf",
+  lean:"∀ X, I X → P X     -- irreducible (every embedded S² bounds a ball) ⇒ prime",
+  q:"Proposition 1.4 exists on printed p. 4, but it classifies prime orientable 3-manifolds that fail irreducibility. It does not imply the submitted converse-direction claim, irreducible implies prime. Hatcher explicitly asserts that implication in the unnumbered discussion immediately preceding the proposition; this is not a reformulation of Proposition 1.4 and does not meet the required one-numbered-result rule.",
+  why:["Elementary and standard, but the needed direction is an unnumbered remark, and the cited numbered result is the converse. This was rejected 5 times and approved once, so strictness varied between sessions.","内容初等且标准，但需要的方向只是一段无编号的说明，所引的编号结果恰好是逆命题。被拒 5 次、通过 1 次，不同 session 的严格程度并不一致。"],
+  out:["fixed","Re-cited to Martelli Prop. 9.2.14; approved.","改引 Martelli Prop. 9.2.14 后通过。"]},
+ {n:12,p:"P06",k:"9cbbd6e4",name:"companion_exterior_properties",tag:["Lean statement false","Lean 命题为假"],
+  src:"E. Birrell, The Knot Quandle, Harvard College Math. Review 1.2 (2007), Lemma 18, p. 40",url:"https://people.math.harvard.edu/hcmr/issues/1a.pdf",
+  lean:"Inc := ∀ d : D2 → X, IsEmbedding d → (∀ w, d w ∈ range j ↔ ‖↑w‖ = 1) →\n  ∃ u, IsEmbedding u ∧ range (j ∘ u) = range (d ∘ fun z => ⟨↑z, ⋯⟩)",
+  q:"However, the Lean predicate Inc is false. Its conclusion requires an embedding u : D2 -> BdryTorus with range (j composed with u) equal to range (d composed with iota), where iota : Circle -> D2 is boundary inclusion. The left side is the image of an ENTIRE closed disk, whereas the right side is an embedded circle. … this equality would give a homeomorphism between D2 and Circle, which is impossible.",
+  why:["A formalization bug: the lemma compares the image of a whole disk with the image of a circle. The source is right; the Lean is unsatisfiable. This was the only false lemma among the 240 rejections.","形式化 bug：拿整个圆盘的像去和一个圆周的像比较。原文没错，Lean 命题不可满足。这是 240 次拒绝里唯一一条假命题。"],
+  out:["open","The reviewer gave the corrected form (compare boundary circles).","审稿人给出了修正写法（比较边界圆周）。"]},
+ {n:13,p:"P06",k:"068bcb95",name:"nonintegral_prime",tag:["Source not accessible","原文无法访问"],
+  src:"Gordon–Luecke, Only integral Dehn surgeries can yield reducible manifolds, Math. Proc. Camb. Phil. Soc. 102 (1987), Theorem 1",url:"https://www.cambridge.org/core/journals/mathematical-proceedings-of-the-cambridge-philosophical-society/article/abs/only-integral-dehn-surgeries-can-yield-reducible-manifolds/6453897351AFACFE2991721E7F89AB13",
+  lean:"∀ (K : FramedKnot) (φ : BdryTorus ≃ₜ BdryTorus), (non-integral slope) → IsClosed3Manifold (K.DehnSurgery φ) ∧ (prime)",
+  q:"Rejected as unverified: the required inspection of the cited numbered theorem could not be completed. The publisher confirms the authors, title, journal, volume, year, pages and DOI, but the accessible article page contains only the introductory extract. … Consequently I have not read Theorem 1 in the paper and cannot certify its exact wording, number, hypotheses or conclusion.",
+  why:["A famous, correct theorem, but behind a paywall. The rules require reading the theorem in the source.","著名且正确的定理，但在付费墙后。规则要求必须在原文中读到定理。"],
+  out:["open","Evidentiary rejection (5 such cases overall).","证据不足型拒绝（共 5 例）。"]}
+];
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+(function(){
+  var tb=document.querySelector("#tax tbody"),max=113;
+  TAX.forEach(function(r){
+    var t=r[2]+r[3]+r[4],tr=document.createElement("tr");
+    tr.innerHTML='<td><span lang="en"><b>'+r[0]+'</b><br><span class="small">'+r[5]+'</span></span><span lang="zh"><b>'+r[1]+'</b><br><span class="small">'+r[6]+'</span></span></td>'+
+      '<td class="num">'+r[2]+'</td><td class="num">'+r[3]+'</td><td class="num">'+r[4]+'</td><td class="num"><b>'+t+'</b></td>'+
+      '<td class="barcell"><div style="display:flex;width:'+(100*t/max)+'%"><div class="bar" style="flex:'+r[2]+'"></div><div class="bar b2" style="flex:'+r[3]+'"></div><div class="bar b3" style="flex:'+r[4]+'"></div></div></td>';
+    tb.appendChild(tr);
+  });
+  var box=document.getElementById("cases");
+  CASES.forEach(function(c){
+    var d=document.createElement("article");d.className="panel case";
+    d.innerHTML='<div class="head"><h3>'+c.n+'. '+c.p+' · <code>'+c.name+'</code></h3><span class="tag"><span lang="en">'+c.tag[0]+'</span><span lang="zh">'+c.tag[1]+'</span></span></div>'+
+      '<div class="meta"><span lang="en">source</span><span lang="zh">出处</span>: <a href="'+c.url+'" rel="noopener">'+esc(c.src)+'</a><br><span lang="en">review key</span><span lang="zh">审核 key</span>: '+c.k+'</div>'+
+      '<div class="lean">'+esc(c.lean)+'</div>'+
+      '<blockquote>'+esc(c.q)+'</blockquote>'+
+      '<p class="why"><span lang="en">'+c.why[0]+'</span><span lang="zh">'+c.why[1]+'</span></p>'+
+      '<div><span class="outcome '+c.out[0]+'"><span lang="en">'+c.out[1]+'</span><span lang="zh">'+c.out[2]+'</span></span></div>';
+    box.appendChild(d);
+  });
+})();
+var LANG="en";
+try{LANG=localStorage.getItem("fp3lit-lang")||(navigator.language||"").toLowerCase().indexOf("zh")===0&&"zh"||"en"}catch(e){}
+window.setLang=function(l){var d=document.documentElement;d.dataset.lang=l;d.lang=l==="zh"?"zh-CN":"en";
+  document.querySelectorAll(".seg button").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.l===l)});
+  try{localStorage.setItem("fp3lit-lang",l)}catch(e){}};
+document.querySelectorAll(".seg button").forEach(function(b){b.addEventListener("click",function(){setLang(b.dataset.l)})});
+setLang(LANG);
+</script>
+</body>
+</html>
