@@ -167,6 +167,25 @@ html[data-lang="zh"] body [lang="en"],html:not([data-lang="zh"]) body [lang="zh"
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .seg button:focus-visible{outline:2px solid var(--tree);outline-offset:-2px}
 .roles td:first-child{white-space:nowrap}
+
+.td{display:flex;flex-direction:column;gap:14px}
+.td-row{display:grid;grid-template-columns:132px 1fr;gap:2px 14px;align-items:center}
+.td-name{font-weight:600;font-size:14px;text-align:right}
+.td-name small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.td-track{position:relative;height:24px;cursor:default;
+  background:linear-gradient(to right,var(--grid) 1px,transparent 1px) 0 0/25% 100%}
+.td-bar{position:absolute;left:0;top:1px;height:22px;border-radius:0 4px 4px 0;background:var(--tree)}
+.td-bar.base{background:var(--git)}
+.td-val{position:absolute;top:1px;z-index:2;padding:0 3px;border-radius:3px;background:var(--panel);font:600 13.5px var(--mono);color:var(--ink);white-space:nowrap}
+.td-val .d{font-weight:500;color:var(--ok);margin-left:8px}
+.td-ref{position:absolute;top:-4px;bottom:-4px;border-left:2px dashed var(--muted);opacity:.7}
+.td-why{grid-column:2;font-size:13.5px;color:var(--ink2);max-width:72ch}
+.td-axis{display:grid;grid-template-columns:132px 1fr;gap:0 14px}
+.td-axis div:last-child{position:relative;height:16px;font:11px var(--mono);color:var(--muted)}
+.td-axis span{position:absolute;transform:translateX(-50%)}
+.td-tip{position:absolute;z-index:5;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;
+  padding:6px 9px;font-size:12.5px;line-height:1.5;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.12);white-space:nowrap}
+@media (max-width:640px){.td-row,.td-axis{grid-template-columns:1fr}.td-name{text-align:left}.td-why{grid-column:1}.td-axis div:first-child{display:none}}
 </style>
 <script>
 (function(){var l="en";try{var s=localStorage.getItem("loti-lang");if(s==="zh"||s==="en")l=s;}catch(e){}
@@ -246,6 +265,24 @@ const PLAY=()=>$t("&#9654; Play","&#9654; 播放"), PAUSE=()=>$t("&#10074;&#1007
     <div class="rp-kpis" id="v5-kpis"></div>
     <div class="scroll"><svg id="v5-svg" role="img" aria-label="v4 ahc058 timeline" style="display:block;min-width:760px;width:100%"></svg></div>
     <p class="foot" id="v5-leg"></p>
+  </div>
+</section>
+
+<section id="teardown">
+  <h2><span lang="en">Teardown: where the gain comes from</span><span lang="zh">拆解：提升从哪里来</span></h2>
+  <p><span lang="en">Mean hidden-set score over the five tasks (Kimi-K3-relative, 50 = Kimi K3; each bar the mean of 3 runs). Under each bar: what it adds to the one above. Hover a bar for the five tasks.</span><span lang="zh">五道题的隐藏集平均分（Kimi-K3 相对分，50 = Kimi K3；每根柱子是 3 次运行的平均）。每根柱子下面写的是它比上一根多了什么。鼠标悬停看五道题各自的分数。</span></p>
+  <div class="panel td" id="td" style="position:relative">
+    <div class="td-row" data-k="ds"><div class="td-name">DeepSeek<small lang="en">paper</small><small lang="zh">论文</small></div><div class="td-track"></div>
+      <div class="td-why"><span lang="en">One agent session for 12 hours (the paper's protocol), DeepSeek V4.1 Flash (1017).</span><span lang="zh">单个 agent session 跑 12 小时（论文的设置），DeepSeek V4.1 Flash (1017)。</span></div></div>
+    <div class="td-row" data-k="v2"><div class="td-name">v2</div><div class="td-track"></div>
+      <div class="td-why"><span lang="en">A tree instead of one session: parallel IMPROVE sessions on separate slots, a controller that lands only changes that win a paired comparison, ARCH/AUD for new variants, a hold-out check before a new champion. Same model and 12 hours, more compute.</span><span lang="zh">从单个 session 换成一棵树：多个 IMPROVE 并行改不同的 slot，controller 只合入配对比较中胜出的修改，ARCH/AUD 提出并审核新变体，换 champion 前做 hold-out 检查。模型和 12 小时不变，算力更多。</span></div></div>
+    <div class="td-row" data-k="v3"><div class="td-name">v3</div><div class="td-track"></div>
+      <div class="td-why"><span lang="en">Faster, better-aimed work: evaluation on Slurm with all instances in parallel (a tw promote 14 &rarr; 2 min); <code>loti eval</code> as the only measuring tool; small consistent gains land; no repeated ideas; review loop and two ARCHs with directions; 10 IMPROVE sessions instead of 3.</span><span lang="zh">干得更快、更准：评测放到 Slurm、所有实例并行（tw 一次 promote 14 &rarr; 2 分钟）；<code>loti eval</code> 作为唯一的测量工具；小而稳定的提升也能合入；不重复分配 idea；审核修改循环，两个 ARCH 各有方向；IMPROVE 从 3 个增加到 10 个。</span></div></div>
+    <div class="td-row" data-k="v4"><div class="td-name">v4</div><div class="td-track"></div>
+      <div class="td-why"><span lang="en">Fewer self-inflicted losses: sessions isolated (no more killed controllers); a hold-out check that tolerates one new failure and explains failures to the sessions; more room for new architectures far from K.</span><span lang="zh">少犯自伤的错：session 隔离（不会再误杀 controller）；hold-out 检查容忍 1 个新失败，并把失败原因告诉 session；离最优远时给新架构更多起步空间。</span></div></div>
+    <div class="td-axis"><div></div><div id="td-axis"></div></div>
+    <p class="foot" id="td-leg" style="margin:0"></p>
+    <div class="td-tip" id="td-tip" hidden></div>
   </div>
 </section>
 
@@ -743,6 +780,45 @@ LANG_CB.push(() => { btn.innerHTML = timer ? PAUSE() : PLAY(); draw(); });
 draw();
 })();
 
+</script>
+<script>
+(() => {
+const R = {
+  ds: {v: 48.5, t: [47.9, 66.8, 46.0, 29.1, 52.9]},
+  v2: {v: 56.1, t: [79.6, 64.3, 62.1, 25.4, 49.2]},
+  v3: {v: 65.5, t: [78.4, 69.4, 83.7, 40.0, 55.9]},
+  v4: {v: 69.4, t: [79.9, 67.9, 77.3, 58.1, 63.7]}};
+const GPT = 88.9, TASKS = ["ahc058", "christmas", "curriculum", "glasscut", "tw"], ORDER = ["ds", "v2", "v3", "v4"];
+const box = document.getElementById("td"); if (!box) return;
+const tip = document.getElementById("td-tip");
+function draw() {
+  ORDER.forEach((k, i) => {
+    const tr = box.querySelector(`[data-k="${k}"] .td-track`), r = R[k];
+    const prev = i ? R[ORDER[i - 1]].v : null, d = prev == null ? "" : (r.v - prev >= 0 ? "+" : "") + (r.v - prev).toFixed(1);
+    tr.innerHTML = `<div class="td-bar${k === "ds" ? " base" : ""}" style="width:${r.v}%"></div>` +
+      `<div class="td-val" style="left:calc(${r.v}% + 6px)">${r.v.toFixed(1)}${d ? `<span class="d">${d}</span>` : ""}</div>` +
+      `<div class="td-ref" style="left:${GPT}%"></div>`;
+    tr.setAttribute("aria-label", `${k}: ${r.v}`);
+    tr.onmousemove = e => {
+      tip.hidden = false;
+      tip.innerHTML = `<b>${k === "ds" ? $t("DeepSeek (paper)", "DeepSeek（论文）") : k} · ${r.v.toFixed(1)}</b><br>` +
+        TASKS.map((t, j) => `<span class="mono">${t}</span> ${r.t[j].toFixed(1)}`).join("<br>");
+      const b = box.getBoundingClientRect();
+      let x = e.clientX - b.left + 14, y = e.clientY - b.top + 12;
+      if (x + tip.offsetWidth > b.width - 8) x = e.clientX - b.left - tip.offsetWidth - 14;
+      tip.style.left = x + "px"; tip.style.top = y + "px";
+    };
+    tr.onmouseleave = () => { tip.hidden = true; };
+  });
+  const ax = document.getElementById("td-axis");
+  ax.innerHTML = [0, 25, 50, 75, 100].map(v => `<span style="left:${v}%">${v}</span>`).join("") +
+    "";
+  document.getElementById("td-leg").innerHTML = $t(
+    `<span style="display:inline-block;width:0;height:12px;border-left:2px dashed var(--muted);vertical-align:-1px;margin-right:6px"></span>paper, GPT-6 Astra: ${GPT}`,
+    `<span style="display:inline-block;width:0;height:12px;border-left:2px dashed var(--muted);vertical-align:-1px;margin-right:6px"></span>论文 GPT-6 Astra：${GPT}`);
+}
+LANG_CB.push(draw); draw();
+})();
 </script>
 </body>
 </html>
