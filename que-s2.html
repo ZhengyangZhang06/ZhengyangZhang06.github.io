@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>*{box-sizing:border-box}body{margin:0}</style>
+<title>S2：有限条闭测地线</title>
+<meta name="description" content="S2：严格闭轨质量界推广到有限条闭测地线的并，运行中。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1b1f27; --ink2:#4a5160; --muted:#7b8292; --line:#dde1e8;
+  --acc:#3d55c4; --acc-soft:#e8ecfb; --ok:#1f7a3a; --ok-soft:#e3f3e8; --warn:#a2610c; --warn-soft:#fbf0de;
+  --bad:#b3261e; --bad-soft:#fbe9e7;
+  --sans:"IBM Plex Sans","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d;
+  --acc:#8399f2; --acc-soft:#222a45; --ok:#5cc47a; --ok-soft:#18301f; --warn:#e0a24a; --warn-soft:#33281a;
+  --bad:#f08a80; --bad-soft:#3a1f1d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d;
+  --acc:#8399f2; --acc-soft:#222a45; --ok:#5cc47a; --ok-soft:#18301f; --warn:#e0a24a; --warn-soft:#33281a;
+  --bad:#f08a80; --bad-soft:#3a1f1d; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.75 var(--sans)}
+.wrap{max-width:900px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:48px}
+h1{font-size:29px;line-height:1.3;margin:0;font-weight:600;text-wrap:balance}
+h2{font-size:20px;margin:0;font-weight:600}
+h3{font-size:15.5px;margin:0;font-weight:600}
+p{margin:0;max-width:72ch}
+ul,ol{margin:0;padding-left:22px;max-width:72ch}
+li+li{margin-top:4px}
+a{color:var(--acc)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+header{display:flex;flex-direction:column;gap:12px}
+header .lede{color:var(--ink2);font-size:16.5px}
+.crumbs{font:13px var(--mono);color:var(--muted)}
+.crumbs a{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font:600 24px/1.15 var(--sans);font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:var(--ink2)}
+.callout{padding:16px 18px;border-left:4px solid var(--acc);background:var(--acc-soft);border-radius:6px;max-width:78ch}
+.callout.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card{padding:16px 18px;display:flex;flex-direction:column;gap:8px;text-decoration:none;color:inherit}
+a.card:hover{border-color:var(--acc)}
+.card .n{font:500 12px var(--mono);color:var(--acc)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--ink2);font-size:13px}
+.st{font:500 12px var(--mono);padding:2px 8px;border-radius:4px;white-space:nowrap;display:inline-block}
+.st.ok{background:var(--ok-soft);color:var(--ok)}
+.st.run{background:var(--warn-soft);color:var(--warn)}
+.st.base{background:var(--acc-soft);color:var(--acc)}
+.lean{font:12.5px/1.6 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;overflow-x:auto;white-space:pre;margin:0}
+.diff{background:var(--ok-soft);color:var(--ok);border-radius:3px;padding:0 2px}
+.formula{font-size:18px;padding:14px 18px;text-align:center}
+.small{font-size:13.5px;color:var(--ink2)}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:1fr}h1{font-size:24px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header>
+  <span class="crumbs"><a href="que.html">严格闭轨质量界</a> / S2</span>
+  <span class="eyebrow">S2 · 运行中 · 2026-11-24 起</span>
+  <h1>S2：有限条闭测地线合起来也不超过 ½ − ε</h1>
+  <p class="lede">原定理只管一条闭测地线。S2 证明：任取有限条闭测地线 γ<sub>1</sub>, …, γ<sub>k</sub>，半经典测度放在它们提升的并集上的总质量也不超过 ½ − ε。</p>
+</header>
+
+<section>
+  <div class="kpis">
+    <div class="panel kpi"><b>43 / 48</b><span>已证明的子目标（11-25 01:00）</span></div>
+    <div class="panel kpi"><b>1</b><span>剩下待证的子目标</span></div>
+    <div class="panel kpi"><b>14</b><span>通过检查的库模块</span></div>
+    <div class="panel kpi"><b>48 小时</b><span>预算</span></div>
+  </div>
+  <div class="callout warn"><b>运行中。</b>根节点还没有证完：最后一个子目标（对数时间尺度上的标签观测量）正在拆分和求证，其余四个节点在等它。根节点被检查器接受后，本页会更新。</div>
+</section>
+
+<section>
+  <h2>和原来比，进步在哪里</h2>
+  <pre class="lean">-- 定理 A（原来）：一条闭测地线
+∀ γ, (本原闭测地线) → ∃ ε &gt; 0, … → μ(Γ_γ) ≤ ½ − ε
+
+-- S2：任意有限条闭测地线
+<span class="diff">∀ k, ∀ γ₁ … γ_k</span>, (每条都是本原闭测地线) → ∃ ε &gt; 0, … → μ(<span class="diff">Γ_γ₁ ∪ … ∪ Γ_γk</span>) ≤ ½ − ε</pre>
+  <p>它排除了原定理管不到的"分散的半疤痕"，比如</p>
+  <div class="panel formula">½·Liouville + ¼·(γ<sub>1</sub> 上的测度) + ¼·(γ<sub>2</sub> 上的测度)</div>
+  <p>对单独每一条闭测地线，这个测度只放了 ¼ 的质量，原定理不会报警；但两条加起来是 ½，正好卡在旧的临界线上，本质上和原定理排除的半疤痕是同一类东西。这是读到定理 A 时最自然的一个追问，S2 直接回答它。</p>
+</section>
+
+<section>
+  <h2>为什么应该成立</h2>
+  <ul>
+    <li><b>抽象部分不受影响。</b>证明的算子代数部分只区分"在管子里"和"在管子外"。把一条闭测地线的管子换成有限条的并，这部分一个字都不用改。</li>
+    <li><b>管子不会重叠。</b>两条不同的闭测地线在曲面上相交时方向不同，所以它们在 S*M 上的提升不相交；足够细的管子是不交的。</li>
+    <li><b>要改的是几何部分。</b>原证明在双曲平面的边界上计数一根"轴"（闭测地线对应的群元素）的平移。现在有 k 根轴：每次访问要选一根，计数常数多出一个 k 倍的因子。这个常数在取极限时消失，所以 ε 不受影响。</li>
+  </ul>
+</section>
+
+<section>
+  <h2>证明的结构（树目前的拆分）</h2>
+  <div class="panel tbl">
+    <table>
+      <thead><tr><th>部分</th><th>内容</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>几何</td><td>k 根轴彼此分开、影子估计、访问时间表、对数包络、并集管子的截断函数</td><td><span class="st ok">已证明</span></td></tr>
+        <tr><td>窗口选择</td><td>区间情形与非线性情形（对应原证明的两个分支）、离散剖面的二分法</td><td><span class="st ok">已证明</span></td></tr>
+        <tr><td>算子层</td><td>路径多项式展开与截断、链重构、Taylor 展开、少切换词计数等</td><td><span class="st ok">已证明</span></td></tr>
+        <tr><td>半经典输入</td><td>对数时间尺度上的标签观测量：测度在能量壳上且不变、块内交换子、一点和相邻两点的一致极限</td><td><span class="st run">进行中</span></td></tr>
+        <tr><td>组装</td><td>从有限占据估计到质量上界，再到根节点</td><td><span class="st run">等上一项</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>它不说明什么</h2>
+  <ul>
+    <li>上界还是 ½ − ε，没有变小。</li>
+    <li>只管有限条。所有闭测地线有可数无穷多条，它们的并在 S*M 中稠密，S2 不涉及。</li>
+    <li>它不排除能量集中在不含单独闭轨的分形不变集上的情形；那需要别的推广（例如小熵双曲集）。</li>
+  </ul>
+</section>
+
+<footer><a href="que-s1.html">← S1：对数拟模</a> · <a href="que.html">总览</a></footer>
+</main>
+</body>
+</html>
