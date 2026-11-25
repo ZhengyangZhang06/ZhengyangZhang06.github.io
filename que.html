@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>*{box-sizing:border-box}body{margin:0}</style>
-<title>严格闭轨质量界：后续结果</title>
-<meta name="description" content="QUE 形式化之上的三个推广：普适常数（S0）、对数拟模（S1）、有限条闭测地线（S2），以及它们比原定理多了什么。">
+<title>Strict closed-orbit mass bound: follow-ups · 严格闭轨质量界：后续结果</title>
+<meta name="description" content="Three extensions of the strict closed-orbit mass bound on compact hyperbolic surfaces, formalized in Lean: a universal constant (S0), logarithmic quasimodes (S1), finite unions of closed geodesics (S2).">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -63,11 +63,256 @@ th{font-weight:600;color:var(--ink2);font-size:13px}
 .formula{font-size:18px;padding:14px 18px;text-align:center}
 .small{font-size:13.5px;color:var(--ink2)}
 footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+.lang-body{display:flex;flex-direction:column;gap:48px}
+html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body[lang="zh"]{display:none!important}
+.bar{display:flex;justify-content:flex-end}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:500 12px var(--mono);background:var(--panel);color:var(--ink2);border:0;padding:5px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--acc);color:#fff}
+.part{border-top:1px solid var(--line);padding-top:36px;scroll-margin-top:16px}
+.part .lede{color:var(--ink2);font-size:16px}
+.part h3{margin-top:8px}
 @media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:1fr}h1{font-size:24px}}
 </style>
 </head>
 <body>
 <main class="wrap">
+<div class="bar" id="top"><span class="seg" role="group" aria-label="Language"><button data-l="en">EN</button><button data-l="zh">中文</button></span></div>
+<div class="lang-body" lang="en">
+<header>
+  <span class="eyebrow">QUE formalization · follow-up results · November 2026</span>
+  <h1>The strict closed-orbit mass bound, a few steps further</h1>
+  <p class="lede">The original theorem says that on a compact hyperbolic surface, a semiclassical measure of Laplace eigenfunctions puts strictly less than half of its mass on a closed geodesic. On top of its completed Lean formalization we proved three extensions: the constant does not depend on the surface (S0), the bound holds for approximate eigenfunctions (S1), and it holds for the union of finitely many closed geodesics (S2, running). This page explains what each one adds.</p>
+</header>
+
+<section>
+  <h2>The original result</h2>
+  <p>Let M be a compact connected orientable surface of curvature −1, γ a primitive closed geodesic, and Γ<sub>γ</sub> the union of its two oriented lifts to the unit cosphere bundle S*M. <b>Theorem A</b>: there is ε &gt; 0 such that every semiclassical limit μ of every sequence of normalized Laplace eigenfunctions satisfies</p>
+  <div class="panel formula">μ(Γ<sub>γ</sub>) ≤ ½ − ε</div>
+  <p>No Hecke, reality, simple-spectrum or subsequence condition is imposed. The bound known before was μ(Γ<sub>γ</sub>) ≤ ½ (the entropy bound of Anantharaman–Nonnenmacher, 2007), and the measure ½·Liouville + ½·(the measure on γ) sits exactly on it; the full-support theorems do not exclude it either. Theorem A is the first to exclude this "half scar".</p>
+  <p>Theorem A is fully formalized in Lean 4: 459 files, about 159,000 lines, no <code>sorry</code>. The proof depends only on the 3 standard axioms and 27 "black boxes", each a verbatim translation of one published result (arXiv preprints included), checked item by item against its source.</p>
+</section>
+
+<section>
+  <h2>Three extensions</h2>
+  <div class="cards">
+    <a class="panel card" href="#s0"><span class="n">S0 · proved</span><h3>A constant independent of the surface</h3><p class="small">One ε works for every compact hyperbolic surface and every closed geodesic at once.</p></a>
+    <a class="panel card" href="#s1"><span class="n">S1 · proved</span><h3>Logarithmic quasimodes</h3><p class="small">The frequency may be blurred by o(h/log(1/h)); the conclusion is unchanged.</p></a>
+    <a class="panel card" href="#s2"><span class="n">S2 · running</span><h3>Finite unions of closed geodesics</h3><p class="small">The total mass on finitely many closed geodesics is also at most ½ − ε.</p></a>
+  </div>
+</section>
+
+<section>
+  <h2>What each one changes in Theorem A</h2>
+  <div class="panel tbl">
+    <table>
+      <thead><tr><th></th><th>ε depends on</th><th>Class of states</th><th>Set being measured</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><b>Theorem A</b> (original)</td><td>the surface M, the metric g, the geodesic γ</td><td>exact eigenfunctions</td><td>the lift Γ<sub>γ</sub> of one closed geodesic</td><td><span class="st base">formalized</span></td></tr>
+        <tr><td><b>S0</b></td><td><b>nothing</b> (a universal constant)</td><td>exact eigenfunctions</td><td>one closed geodesic</td><td><span class="st ok">proved</span></td></tr>
+        <tr><td><b>S1</b></td><td>M, g, γ</td><td><b>quasimodes of spectral width o(h/log(1/h))</b></td><td>one closed geodesic</td><td><span class="st ok">proved</span></td></tr>
+        <tr><td><b>S2</b></td><td>M, g and the family of geodesics</td><td>exact eigenfunctions</td><td><b>the union of the lifts of finitely many closed geodesics</b></td><td><span class="st run">running</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The three extensions strengthen Theorem A in three different directions: S0 strengthens the <b>quantifier</b> (a more uniform constant), S1 enlarges the <b>class of states</b> (a more robust conclusion), and S2 enlarges the <b>set being measured</b> (more counterexamples excluded). None of them pushes the bound ½ − ε lower; bringing the closed-orbit mass down to 0 is still an open problem.</p>
+</section>
+
+<section class="part" id="s0">
+<span class="eyebrow">S0 · proved · 2026-11-23</span>
+<h2>S0: one ε for every surface</h2>
+<p class="lede">In the original theorem, ε is given after the surface and the closed geodesic are chosen; read literally, every surface may have its own ε. S0 proves that a universal ε exists, valid for every compact hyperbolic surface and every closed geodesic at once.</p>
+<div class="kpis">
+    <div class="panel kpi"><b>67 min</b><span>for the LOT tree, start to proof</span></div>
+    <div class="panel kpi"><b>~70 lines</b><span>of new Lean proof</span></div>
+    <div class="panel kpi"><b>0</b><span>new axioms</span></div>
+    <div class="panel kpi"><b>27</b><span>black boxes used, the same as Theorem A</span></div>
+  </div>
+
+
+
+  <h3>What it adds to the original</h3>
+  <p>The two statements differ in one place: where <code>∃ ε</code> stands.</p>
+  <pre class="lean">-- Theorem A (original)
+∀ M g, (curvature −1) → ∀ γ, (primitive closed geodesic) → <span class="diff">∃ ε &gt; 0</span>, ∀ Q u μ, … → μ(Γ_γ) ≤ ½ − ε
+
+-- S0
+<span class="diff">∃ ε &gt; 0</span>, ∀ M g, (curvature −1) → ∀ γ, (primitive closed geodesic) → ∀ Q u μ, … → μ(Γ_γ) ≤ ½ − ε</pre>
+  <ul>
+    <li><b>Before</b>: every surface and every closed geodesic has its own ε. In principle, the ε of a sequence of ever more complicated surfaces could tend to 0.</li>
+    <li><b>Now</b>: the same ε works whatever the genus, however distorted the surface, however long or short the closed geodesic.</li>
+  </ul>
+  <p>This is exactly what Remark 1.2 of the manuscript claims and what the original formalization did not prove.</p>
+
+
+
+  <h3>What it reveals</h3>
+  <p>The proof only needs a rearrangement because ε comes from two things that do not see the geometry:</p>
+  <ul>
+    <li>the exponent β of the Cohen–Dyatlov nonlinear uncertainty principle;</li>
+    <li>a purely combinatorial selection theorem (Theorem 2.18 of the paper).</li>
+  </ul>
+  <p>The geometry of the surface (curvature, length of the closed orbit, injectivity radius) only enters constants in the middle of the proof, and all of them disappear in the limits. So <b>ε can only be improved by improving the uncertainty exponent or the combinatorial selection theorem; better geometric estimates do not help.</b></p>
+
+
+
+  <h3>The proof</h3>
+  <p>The main proof chain only passes the statement down level by level; the surface M is introduced only at the bottom level, and ε is fixed by the two steps above before that. The proof therefore does two things:</p>
+  <ol>
+    <li><code>universal_of_nodes</code>: move the choice of ε in front of "for every surface";</li>
+    <li><code>window_reduction</code>: assemble the window-reduction statement the proof needs directly from nodes that are already proved.</li>
+  </ol>
+  <p>No new mathematics and no new axioms.</p>
+
+
+
+  <h3>What it does not show</h3>
+  <ul>
+    <li>The numerical value of ε is still unknown: it comes from a compactness argument and a non-explicit exponent.</li>
+    <li>It says nothing about limits of sequences of surfaces at fixed frequency (such as genus tending to infinity): each surface in the theorem is fixed while the frequency tends to infinity.</li>
+    <li>The bound is still ½ − ε; it did not get smaller.</li>
+  </ul>
+</section>
+
+<section class="part" id="s1">
+<span class="eyebrow">S1 · proved · 2026-11-23</span>
+<h2>S1: the frequency need not be exact</h2>
+<p class="lede">The original theorem requires genuine Laplace eigenfunctions, with no error in the frequency at all. S1 proves that as long as the frequency is blurred by less than h/log(1/h), the conclusion μ(Γ<sub>γ</sub>) ≤ ½ − ε still holds.</p>
+<div class="kpis">
+    <div class="panel kpi"><b>8 h 49 min</b><span>for the LOT tree, start to proof</span></div>
+    <div class="panel kpi"><b>15</b><span>subgoals proved</span></div>
+    <div class="panel kpi"><b>~6,200 lines</b><span>of new Lean proof (77 files)</span></div>
+    <div class="panel kpi"><b>0</b><span>new axioms</span></div>
+  </div>
+
+
+
+  <h3>What it adds to the original</h3>
+  <p>One hypothesis changes: "exact eigenfunction" becomes "logarithmic quasimode".</p>
+  <pre class="lean">-- Theorem A (original): exact eigenfunctions
+Δ_g u_j = −λ_j² u_j
+
+-- S1: logarithmic quasimodes (h = 1/λ)
+<span class="diff">‖Δ_g u_j + λ_j² u_j‖ ≤ δ_j · λ_j / log λ_j,   δ_j → 0</span>
+-- equivalently: ‖(−h²Δ − 1) u‖ = o(h / log(1/h))</pre>
+  <p>Exact eigenfunctions are the case δ = 0, so S1 is strictly stronger than Theorem A. ε is quantified as before: chosen after the surface and the closed geodesic, then valid for all quasimode sequences at once.</p>
+
+
+
+  <h3>Why exactly h/log(1/h)</h3>
+  <div class="panel tbl">
+    <table>
+      <thead><tr><th>Spectral width (frequency blur)</th><th>Closed-orbit mass</th></tr></thead>
+      <tbody>
+        <tr><td>0 (exact eigenfunctions)</td><td>≤ ½ − ε (Theorem A)</td></tr>
+        <tr><td>o(h/log(1/h))</td><td><b>≤ ½ − ε (S1)</b></td></tr>
+        <tr><td>c·h/log(1/h), c fixed</td><td>can be &gt; 0: there are examples that scar a hyperbolic closed orbit (Eswarathasan–Nonnenmacher, 2017)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Every tool in the proof (Egorov's theorem, the uncertainty principle, the occupation argument) follows the dynamics only up to times of order log(1/h), the Ehrenfest time. Over that time, the accumulated difference between a state of width o(h/log(1/h)) and an exact eigenfunction still tends to 0; a little wider and one meets counterexamples that really exist. S1 thus pins the limit of the present method at exactly h/log(1/h).</p>
+
+
+
+  <h3>Why it matters</h3>
+  <ul>
+    <li><b>The conclusion is robust</b>: it does not rely on the idealized condition that the frequency is exact.</li>
+    <li><b>It is the foundation of any "iteration" scheme.</b> To push the closed-orbit mass down step by step, every step (for example, cutting out the part near the orbit and filtering the frequency again) produces a state that is no longer an exact eigenfunction but a quasimode of narrow width. Without S1 the theorem could not be applied at the second step.</li>
+  </ul>
+
+
+
+  <h3>The structure of the proof</h3>
+  <p>In the original proof, exactness of the eigenfunction is used in only three places. The tree split the root accordingly:</p>
+  <ol>
+    <li><b>Spectral control</b>: turn the quasimode condition into an estimate on the spectral expansion, giving the approximate phase of the propagator ‖U(t)u − e<sup>−it/h</sup>u‖ = o(|t|/log(1/h));</li>
+    <li><b>Fixed-time nodes</b>: quasimode versions of support invariance and of the fixed-time limits;</li>
+    <li><b>Logarithmic-time capture</b>: replace the time-shift invariance of the observation statistics by an approximate version whose error, summed over logarithmically many steps, is o(1);</li>
+    <li><b>Assembly</b>: the new error disappears in the first limit (j → ∞); the later steps are unchanged, and so is ε.</li>
+  </ol>
+  <p>No new mathematical idea is needed; the difficulty is technical. The spectral lemma, first seen as the riskiest step, was the first to be proved.</p>
+
+
+
+  <h3>What it does not show</h3>
+  <ul>
+    <li>The bound is still ½ − ε; it did not get smaller.</li>
+    <li>It does not give the "gain lemma" (that each step can push the scar a little higher). Given S1, the gain lemma is equivalent to "the closed-orbit mass is 0", which is still an open problem.</li>
+  </ul>
+</section>
+
+<section class="part" id="s2">
+<span class="eyebrow">S2 · running · since 2026-11-24</span>
+<h2>S2: finitely many closed geodesics together also stay below ½ − ε</h2>
+<p class="lede">The original theorem covers one closed geodesic. S2 proves that for any finitely many closed geodesics γ<sub>1</sub>, …, γ<sub>k</sub>, the total mass a semiclassical measure puts on the union of their lifts is also at most ½ − ε.</p>
+<div class="kpis">
+    <div class="panel kpi"><b>43 / 48</b><span>subgoals proved (11-25 01:00 UTC)</span></div>
+    <div class="panel kpi"><b>1</b><span>subgoal left to prove</span></div>
+    <div class="panel kpi"><b>14</b><span>library modules accepted</span></div>
+    <div class="panel kpi"><b>48 h</b><span>budget</span></div>
+  </div>
+  <div class="callout warn"><b>Running.</b> The root is not proved yet: the last subgoal (label observables at logarithmic time scales) is being split and proved, and the other four open nodes wait on it. This page will be updated once the checker accepts the root.</div>
+
+
+
+  <h3>What it adds to the original</h3>
+  <pre class="lean">-- Theorem A (original): one closed geodesic
+∀ γ, (primitive closed geodesic) → ∃ ε &gt; 0, … → μ(Γ_γ) ≤ ½ − ε
+
+-- S2: any finitely many closed geodesics
+<span class="diff">∀ k, ∀ γ₁ … γ_k</span>, (each a primitive closed geodesic) → ∃ ε &gt; 0, … → μ(<span class="diff">Γ_γ₁ ∪ … ∪ Γ_γk</span>) ≤ ½ − ε</pre>
+  <p>It excludes "spread-out half scars" that the original theorem does not reach, for example</p>
+  <div class="panel formula">½·Liouville + ¼·(the measure on γ<sub>1</sub>) + ¼·(the measure on γ<sub>2</sub>)</div>
+  <p>This measure puts only ¼ on each closed geodesic, so the original theorem does not object; but the two together carry ½, exactly the old threshold, and it is the same kind of object as the half scar that Theorem A excludes. It is the most natural question to ask after reading Theorem A, and S2 answers it directly.</p>
+
+
+
+  <h3>Why it should hold</h3>
+  <ul>
+    <li><b>The abstract part is unaffected.</b> The operator-algebra part of the proof only distinguishes "inside the tube" from "outside". Replacing the tube around one closed geodesic by a tube around a finite union changes nothing there.</li>
+    <li><b>The tubes do not overlap.</b> Where two distinct closed geodesics cross on the surface their directions differ, so their lifts to S*M are disjoint; thin enough tubes are disjoint.</li>
+    <li><b>The geometric part has to change.</b> The original proof counts the translates of one "axis" (the group element of the closed geodesic) on the boundary of the hyperbolic plane. Now there are k axes: each visit picks one, and the counting constant gains a factor k. That constant disappears in the limits, so ε is not affected.</li>
+  </ul>
+
+
+
+  <h3>The structure of the proof (the tree's current split)</h3>
+  <div class="panel tbl">
+    <table>
+      <thead><tr><th>Part</th><th>Content</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Geometry</td><td>separating the k axes, shadow estimates, visit schedules, logarithmic envelopes, cutoffs for the union tube</td><td><span class="st ok">proved</span></td></tr>
+        <tr><td>Window selection</td><td>the interval case and the nonlinear case (the two branches of the original proof), the dichotomy for discrete profiles</td><td><span class="st ok">proved</span></td></tr>
+        <tr><td>Operator layer</td><td>path-polynomial expansion and truncation, chain reconstruction, Taylor expansions, counting words with few switches, and more</td><td><span class="st ok">proved</span></td></tr>
+        <tr><td>Semiclassical input</td><td>label observables at logarithmic time scales: the measure lies on the energy shell and is invariant, commutators within a block, uniform one-site and adjacent-pair limits</td><td><span class="st run">in progress</span></td></tr>
+        <tr><td>Assembly</td><td>from the finite occupation estimate to the mass bound, then to the root</td><td><span class="st run">waits on the above</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+
+  <h3>What it does not show</h3>
+  <ul>
+    <li>The bound is still ½ − ε; it did not get smaller.</li>
+    <li>Only finitely many. There are countably many closed geodesics and their union is dense in S*M; S2 says nothing about it.</li>
+    <li>It does not exclude mass concentrating on a fractal invariant set that contains no single closed orbit; that needs a different extension (for example, hyperbolic sets of small entropy).</li>
+  </ul>
+</section>
+
+<section>
+  <h2>How it was verified</h2>
+  <ul>
+    <li>Each extension is a Lean theorem statement that imports the whole existing formalization (Mathlib c55e6e786f49, DifferentialGeometry, QUE), compiled with the PaperLean v0.2.4 toolchain.</li>
+    <li>The proofs were found by LOT (Lean Option Tree), which splits a theorem and proves the parts in parallel: one tree per theorem, every subgoal a frozen Lean statement that must pass the checker on its own.</li>
+    <li>The final proofs are accepted by one checker: comparator confirms that the statement was not changed, and nanoda, a kernel independent of Lean's, replays the whole proof. The only axioms allowed are the 3 standard ones and the 35 black boxes already reviewed in the existing formalization; no <code>sorry</code>, no new axioms.</li>
+    <li>The checker was tested end to end: a submission using the real proof of the original theorem is accepted, and a <code>sorry</code> submission is rejected.</li>
+  </ul>
+</section>
+
+<footer>Updated 2026-11-25. The manuscript behind Theorem A has not been peer reviewed; the Cohen–Dyatlov nonlinear uncertainty principle it uses (arXiv:2610.37549) is an October 2026 preprint.</footer>
+</div>
+<div class="lang-body" lang="zh">
 <header>
   <span class="eyebrow">QUE 形式化 · 后续结果 · 2026 年 11 月</span>
   <h1>严格闭轨质量界：在原定理之上又往前走了几步</h1>
@@ -85,9 +330,9 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 <section>
   <h2>三个推广</h2>
   <div class="cards">
-    <a class="panel card" href="que-s0.html"><span class="n">S0 · 已证明</span><h3>常数与曲面无关</h3><p class="small">一个 ε 对所有紧致双曲曲面、所有闭测地线同时成立。</p></a>
-    <a class="panel card" href="que-s1.html"><span class="n">S1 · 已证明</span><h3>推广到对数拟模</h3><p class="small">频率允许有 o(h/log(1/h)) 的模糊，结论不变。</p></a>
-    <a class="panel card" href="que-s2.html"><span class="n">S2 · 运行中</span><h3>有限条闭测地线的并</h3><p class="small">任意有限条闭测地线上的总质量也不超过 ½ − ε。</p></a>
+    <a class="panel card" href="#s0-zh"><span class="n">S0 · 已证明</span><h3>常数与曲面无关</h3><p class="small">一个 ε 对所有紧致双曲曲面、所有闭测地线同时成立。</p></a>
+    <a class="panel card" href="#s1-zh"><span class="n">S1 · 已证明</span><h3>推广到对数拟模</h3><p class="small">频率允许有 o(h/log(1/h)) 的模糊，结论不变。</p></a>
+    <a class="panel card" href="#s2-zh"><span class="n">S2 · 运行中</span><h3>有限条闭测地线的并</h3><p class="small">任意有限条闭测地线上的总质量也不超过 ½ − ε。</p></a>
   </div>
 </section>
 
@@ -107,6 +352,189 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   <p>三个推广分别沿三个不同的方向加强了定理 A：S0 加强了<b>量词</b>（常数更一致），S1 扩大了<b>状态的类</b>（结论更稳健），S2 扩大了<b>被测的集合</b>（排除更多反例）。三者都没有把上界 ½ − ε 往下压；"把闭轨质量压到 0"仍然是公开问题。</p>
 </section>
 
+
+<section class="part" id="s0-zh">
+<span class="eyebrow">S0 · 已证明 · 2026-11-23</span>
+<h2>S0：一个 ε 对所有曲面都成立</h2>
+<p class="lede">原定理里的 ε 是先选好曲面和闭测地线之后才给出的，按字面意思每个曲面可以有自己的 ε。S0 证明存在一个普适的 ε，对所有紧致双曲曲面、所有闭测地线同时成立。</p>
+<div class="kpis">
+    <div class="panel kpi"><b>67 分钟</b><span>LOT 树从启动到证完</span></div>
+    <div class="panel kpi"><b>约 70 行</b><span>新写的 Lean 证明</span></div>
+    <div class="panel kpi"><b>0</b><span>新增公理</span></div>
+    <div class="panel kpi"><b>27</b><span>依赖的黑箱，与原定理相同</span></div>
+  </div>
+
+
+
+  <h3>和原来比，进步在哪里</h3>
+  <p>两个陈述只差一处：<code>∃ ε</code> 的位置。</p>
+  <pre class="lean">-- 定理 A（原来）
+∀ M g, (曲率 −1) → ∀ γ, (本原闭测地线) → <span class="diff">∃ ε &gt; 0</span>, ∀ Q u μ, … → μ(Γ_γ) ≤ ½ − ε
+
+-- S0
+<span class="diff">∃ ε &gt; 0</span>, ∀ M g, (曲率 −1) → ∀ γ, (本原闭测地线) → ∀ Q u μ, … → μ(Γ_γ) ≤ ½ − ε</pre>
+  <ul>
+    <li><b>原来</b>：每个曲面、每条闭测地线有自己的 ε。理论上，一列越来越复杂的曲面的 ε 可能趋于 0。</li>
+    <li><b>现在</b>：同一个 ε 对亏格多大、形状多扭曲、闭测地线多长多短的曲面都成立。</li>
+  </ul>
+  <p>这正是手稿附注 1.2 里声称、但原形式化没有证明的内容。</p>
+
+
+
+  <h3>它揭示了什么</h3>
+  <p>这个证明之所以只需要重新排列，是因为 ε 只来自两个与几何无关的东西：</p>
+  <ul>
+    <li>Cohen–Dyatlov 非线性不确定性原理给出的指数 β；</li>
+    <li>一个纯组合的选择定理（论文定理 2.18）。</li>
+  </ul>
+  <p>曲面的几何（曲率、闭轨长度、单射半径）只影响证明中途的常数，这些常数在取极限时全部消失。所以<b>要改进 ε，只能改进不确定性原理的指数或那个组合选择定理；改进几何估计没有用。</b></p>
+
+
+
+  <h3>证明</h3>
+  <p>主定理的证明链只是把陈述一层层往下传，曲面 M 只在最底层才被引入，而 ε 在那一层之前就已经由上面两步确定了。所以证明只做了两件事：</p>
+  <ol>
+    <li><code>universal_of_nodes</code>：把 ε 的选取挪到"任取曲面"之前；</li>
+    <li><code>window_reduction</code>：直接用已有的已证节点组装出证明所需的窗口约化陈述。</li>
+  </ol>
+  <p>没有新的数学，也没有新的公理。</p>
+
+
+
+  <h3>它不说明什么</h3>
+  <ul>
+    <li>ε 的具体数值仍然不知道：它来自紧性论证和一个非显式的指数。</li>
+    <li>它管不到"曲面序列、频率固定"那类极限（比如亏格趋于无穷），定理里每个曲面都是固定的，再让频率趋于无穷。</li>
+    <li>上界还是 ½ − ε，没有变小。</li>
+  </ul>
+</section>
+
+<section class="part" id="s1-zh">
+<span class="eyebrow">S1 · 已证明 · 2026-11-23</span>
+<h2>S1：频率不必完全精确</h2>
+<p class="lede">原定理要求真正的 Laplace 本征函数，频率一点都不能差。S1 证明：只要频率的模糊程度小于 h/log(1/h)，结论 μ(Γ<sub>γ</sub>) ≤ ½ − ε 依然成立。</p>
+<div class="kpis">
+    <div class="panel kpi"><b>8 小时 49 分</b><span>LOT 树从启动到证完</span></div>
+    <div class="panel kpi"><b>15</b><span>证完的子目标</span></div>
+    <div class="panel kpi"><b>约 6,200 行</b><span>新写的 Lean 证明（77 个文件）</span></div>
+    <div class="panel kpi"><b>0</b><span>新增公理</span></div>
+  </div>
+
+
+
+  <h3>和原来比，进步在哪里</h3>
+  <p>只改了一个假设：把"精确本征函数"换成"对数拟模"。</p>
+  <pre class="lean">-- 定理 A（原来）：精确本征函数
+Δ_g u_j = −λ_j² u_j
+
+-- S1：对数拟模（h = 1/λ）
+<span class="diff">‖Δ_g u_j + λ_j² u_j‖ ≤ δ_j · λ_j / log λ_j,   δ_j → 0</span>
+-- 等价地：‖(−h²Δ − 1) u‖ = o(h / log(1/h))</pre>
+  <p>精确本征函数是 δ = 0 的特例，所以 S1 严格强于定理 A。ε 和原来一样：先选曲面和闭测地线，再对所有拟模序列一起成立。</p>
+
+
+
+  <h3>为什么正好是 h/log(1/h)</h3>
+  <div class="panel tbl">
+    <table>
+      <thead><tr><th>谱宽（频率模糊度）</th><th>闭轨质量</th></tr></thead>
+      <tbody>
+        <tr><td>0（精确本征函数）</td><td>≤ ½ − ε（定理 A）</td></tr>
+        <tr><td>o(h/log(1/h))</td><td><b>≤ ½ − ε（S1）</b></td></tr>
+        <tr><td>c·h/log(1/h)，c 固定</td><td>可以 &gt; 0：已知有在双曲闭轨上形成疤痕的例子（Eswarathasan–Nonnenmacher 2017）</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>证明里用到的所有工具（Egorov 定理、不确定性原理、占据论证）只追踪到 log(1/h) 量级的时间（Ehrenfest 时间）。在这个时间内，谱宽 o(h/log(1/h)) 的状态和精确本征函数的误差累积起来仍然趋于 0；再宽一点就会碰到真实存在的反例。S1 因此把现有方法的边界精确地定在 h/log(1/h)。</p>
+
+
+
+  <h3>为什么它重要</h3>
+  <ul>
+    <li><b>结论是稳健的</b>，不依赖"频率完全精确"这个理想条件。</li>
+    <li><b>它是任何"迭代"方案的地基。</b>想把闭轨质量一步步压到 0，每一步操作（比如截取闭轨附近的部分再过滤频率）产生的新状态都不再是精确本征函数，而是窄谱宽的拟模。没有 S1，定理在迭代的第二步就用不上了。</li>
+  </ul>
+
+
+
+  <h3>证明的结构</h3>
+  <p>在原证明里，"精确本征"只在三个地方用到。树把根节点拆成了对应的几块：</p>
+  <ol>
+    <li><b>谱控制</b>：把拟模条件转成谱展开里的估计，得到传播子的近似相位 ‖U(t)u − e<sup>−it/h</sup>u‖ = o(|t|/log(1/h))；</li>
+    <li><b>固定时间节点</b>：支撑不变性和固定时间极限的拟模版本；</li>
+    <li><b>对数时间捕获</b>：把"观测统计的时间平移不变性"换成近似版本，误差在对数步数内累积为 o(1)；</li>
+    <li><b>组装</b>：新误差在第一个极限（j → ∞）里就消失，后面的步骤不变，ε 也不变。</li>
+  </ol>
+  <p>不需要新的数学想法，难点是技术细节；最初认为风险最大的谱引理最先被证完。</p>
+
+
+
+  <h3>它不说明什么</h3>
+  <ul>
+    <li>上界还是 ½ − ε，没有变小。</li>
+    <li>它不能推出"增益引理"（"每一步能把疤痕再推高一点"）。在 S1 成立的前提下，增益引理等价于"闭轨质量为 0"，仍是公开问题。</li>
+  </ul>
+</section>
+
+<section class="part" id="s2-zh">
+<span class="eyebrow">S2 · 运行中 · 2026-11-24 起</span>
+<h2>S2：有限条闭测地线合起来也不超过 ½ − ε</h2>
+<p class="lede">原定理只管一条闭测地线。S2 证明：任取有限条闭测地线 γ<sub>1</sub>, …, γ<sub>k</sub>，半经典测度放在它们提升的并集上的总质量也不超过 ½ − ε。</p>
+<div class="kpis">
+    <div class="panel kpi"><b>43 / 48</b><span>已证明的子目标（11-25 01:00）</span></div>
+    <div class="panel kpi"><b>1</b><span>剩下待证的子目标</span></div>
+    <div class="panel kpi"><b>14</b><span>通过检查的库模块</span></div>
+    <div class="panel kpi"><b>48 小时</b><span>预算</span></div>
+  </div>
+  <div class="callout warn"><b>运行中。</b>根节点还没有证完：最后一个子目标（对数时间尺度上的标签观测量）正在拆分和求证，其余四个节点在等它。根节点被检查器接受后，本页会更新。</div>
+
+
+
+  <h3>和原来比，进步在哪里</h3>
+  <pre class="lean">-- 定理 A（原来）：一条闭测地线
+∀ γ, (本原闭测地线) → ∃ ε &gt; 0, … → μ(Γ_γ) ≤ ½ − ε
+
+-- S2：任意有限条闭测地线
+<span class="diff">∀ k, ∀ γ₁ … γ_k</span>, (每条都是本原闭测地线) → ∃ ε &gt; 0, … → μ(<span class="diff">Γ_γ₁ ∪ … ∪ Γ_γk</span>) ≤ ½ − ε</pre>
+  <p>它排除了原定理管不到的"分散的半疤痕"，比如</p>
+  <div class="panel formula">½·Liouville + ¼·(γ<sub>1</sub> 上的测度) + ¼·(γ<sub>2</sub> 上的测度)</div>
+  <p>对单独每一条闭测地线，这个测度只放了 ¼ 的质量，原定理不会报警；但两条加起来是 ½，正好卡在旧的临界线上，本质上和原定理排除的半疤痕是同一类东西。这是读到定理 A 时最自然的一个追问，S2 直接回答它。</p>
+
+
+
+  <h3>为什么应该成立</h3>
+  <ul>
+    <li><b>抽象部分不受影响。</b>证明的算子代数部分只区分"在管子里"和"在管子外"。把一条闭测地线的管子换成有限条的并，这部分一个字都不用改。</li>
+    <li><b>管子不会重叠。</b>两条不同的闭测地线在曲面上相交时方向不同，所以它们在 S*M 上的提升不相交；足够细的管子是不交的。</li>
+    <li><b>要改的是几何部分。</b>原证明在双曲平面的边界上计数一根"轴"（闭测地线对应的群元素）的平移。现在有 k 根轴：每次访问要选一根，计数常数多出一个 k 倍的因子。这个常数在取极限时消失，所以 ε 不受影响。</li>
+  </ul>
+
+
+
+  <h3>证明的结构（树目前的拆分）</h3>
+  <div class="panel tbl">
+    <table>
+      <thead><tr><th>部分</th><th>内容</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>几何</td><td>k 根轴彼此分开、影子估计、访问时间表、对数包络、并集管子的截断函数</td><td><span class="st ok">已证明</span></td></tr>
+        <tr><td>窗口选择</td><td>区间情形与非线性情形（对应原证明的两个分支）、离散剖面的二分法</td><td><span class="st ok">已证明</span></td></tr>
+        <tr><td>算子层</td><td>路径多项式展开与截断、链重构、Taylor 展开、少切换词计数等</td><td><span class="st ok">已证明</span></td></tr>
+        <tr><td>半经典输入</td><td>对数时间尺度上的标签观测量：测度在能量壳上且不变、块内交换子、一点和相邻两点的一致极限</td><td><span class="st run">进行中</span></td></tr>
+        <tr><td>组装</td><td>从有限占据估计到质量上界，再到根节点</td><td><span class="st run">等上一项</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+
+  <h3>它不说明什么</h3>
+  <ul>
+    <li>上界还是 ½ − ε，没有变小。</li>
+    <li>只管有限条。所有闭测地线有可数无穷多条，它们的并在 S*M 中稠密，S2 不涉及。</li>
+    <li>它不排除能量集中在不含单独闭轨的分形不变集上的情形；那需要别的推广（例如小熵双曲集）。</li>
+  </ul>
+</section>
+
 <section>
   <h2>怎么验证的</h2>
   <ul>
@@ -118,6 +546,19 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 </section>
 
 <footer>本页更新于 2026-11-25。定理 A 所依据的手稿尚未经过同行评审；其中用到的 Cohen–Dyatlov 非线性不确定性原理（arXiv:2610.37549）是 2026 年 10 月的预印本。</footer>
+</div>
 </main>
+<script>
+(function(){
+  var d=document.documentElement, pick;
+  try{pick=localStorage.getItem('que-lang')}catch(e){}
+  if(pick!=='zh'&&pick!=='en'){pick=(navigator.language||'').toLowerCase().indexOf('zh')===0?'zh':'en'}
+  function set(l){d.setAttribute('data-lang',l);d.setAttribute('lang',l==='zh'?'zh':'en');
+    document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.l===l?'true':'false')});
+    try{localStorage.setItem('que-lang',l)}catch(e){}}
+  document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){set(b.dataset.l)})});
+  set(pick);
+})();
+</script>
 </body>
 </html>
