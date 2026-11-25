@@ -82,7 +82,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 <header>
   <span class="eyebrow">QUE formalization · follow-up results · November 2026</span>
   <h1>The strict closed-orbit mass bound, a few steps further</h1>
-  <p class="lede">The original theorem says that on a compact hyperbolic surface, a semiclassical measure of Laplace eigenfunctions puts strictly less than half of its mass on a closed geodesic. On top of its completed Lean formalization we proved three extensions: the constant does not depend on the surface (S0), the bound holds for approximate eigenfunctions (S1), and it holds for the union of finitely many closed geodesics (S2, running). This page explains what each one adds.</p>
+  <p class="lede">The original theorem says that on a compact hyperbolic surface, a semiclassical measure of Laplace eigenfunctions puts strictly less than half of its mass on a closed geodesic. On top of its completed Lean formalization we proved three extensions: the constant does not depend on the surface (S0), the bound holds for approximate eigenfunctions (S1), and it holds for the union of finitely many closed geodesics (S2). This page explains what each one adds.</p>
 </header>
 
 <section>
@@ -98,7 +98,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
   <div class="cards">
     <a class="panel card" href="#s0"><span class="n">S0 · proved</span><h3>A constant independent of the surface</h3><p class="small">One ε works for every compact hyperbolic surface and every closed geodesic at once.</p></a>
     <a class="panel card" href="#s1"><span class="n">S1 · proved</span><h3>Logarithmic quasimodes</h3><p class="small">The frequency may be blurred by o(h/log(1/h)); the conclusion is unchanged.</p></a>
-    <a class="panel card" href="#s2"><span class="n">S2 · running</span><h3>Finite unions of closed geodesics</h3><p class="small">The total mass on finitely many closed geodesics is also at most ½ − ε.</p></a>
+    <a class="panel card" href="#s2"><span class="n">S2 · proved</span><h3>Finite unions of closed geodesics</h3><p class="small">The total mass on finitely many closed geodesics is also at most ½ − ε.</p></a>
   </div>
 </section>
 
@@ -111,7 +111,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
         <tr><td><b>Theorem A</b> (original)</td><td>the surface M, the metric g, the geodesic γ</td><td>exact eigenfunctions</td><td>the lift Γ<sub>γ</sub> of one closed geodesic</td><td><span class="st base">formalized</span></td></tr>
         <tr><td><b>S0</b></td><td><b>nothing</b> (a universal constant)</td><td>exact eigenfunctions</td><td>one closed geodesic</td><td><span class="st ok">proved</span></td></tr>
         <tr><td><b>S1</b></td><td>M, g, γ</td><td><b>quasimodes of spectral width o(h/log(1/h))</b></td><td>one closed geodesic</td><td><span class="st ok">proved</span></td></tr>
-        <tr><td><b>S2</b></td><td>M, g and the family of geodesics</td><td>exact eigenfunctions</td><td><b>the union of the lifts of finitely many closed geodesics</b></td><td><span class="st run">running</span></td></tr>
+        <tr><td><b>S2</b></td><td>M, g and the family of geodesics</td><td>exact eigenfunctions</td><td><b>the union of the lifts of finitely many closed geodesics</b></td><td><span class="st ok">proved</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -242,16 +242,16 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section class="part" id="s2">
-<span class="eyebrow">S2 · running · since 2026-11-24</span>
+<span class="eyebrow">S2 · proved · 2026-11-25</span>
 <h2>S2: finitely many closed geodesics together also stay below ½ − ε</h2>
 <p class="lede">The original theorem covers one closed geodesic. S2 proves that for any finitely many closed geodesics γ<sub>1</sub>, …, γ<sub>k</sub>, the total mass a semiclassical measure puts on the union of their lifts is also at most ½ − ε.</p>
 <div class="kpis">
-    <div class="panel kpi"><b>43 / 48</b><span>subgoals proved (11-25 01:00 UTC)</span></div>
-    <div class="panel kpi"><b>1</b><span>subgoal left to prove</span></div>
-    <div class="panel kpi"><b>14</b><span>library modules accepted</span></div>
-    <div class="panel kpi"><b>48 h</b><span>budget</span></div>
+    <div class="panel kpi"><b>~14 h</b><span>LOT tree running time (excluding the node failure)</span></div>
+    <div class="panel kpi"><b>48</b><span>subgoals proved</span></div>
+    <div class="panel kpi"><b>~12,000 lines</b><span>of new Lean proof (197 files)</span></div>
+    <div class="panel kpi"><b>0</b><span>new axioms</span></div>
   </div>
-  <div class="callout warn"><b>Running.</b> The root is not proved yet: the last subgoal (label observables at logarithmic time scales) is being split and proved, and the other four open nodes wait on it. This page will be updated once the checker accepts the root.</div>
+  <div class="callout"><b>Proved.</b> The checker accepted the root on 2026-11-25 at 12:58 UTC (comparator + nanoda). The proof has 414 theorems and lemmas, no <code>sorry</code>, no new axioms. A compute node failed once during the run; the tree resumed from its saved state and finished the final check.</div>
 
 
 
@@ -276,7 +276,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 
 
 
-  <h3>The structure of the proof (the tree's current split)</h3>
+  <h3>The structure of the proof</h3>
   <div class="panel tbl">
     <table>
       <thead><tr><th>Part</th><th>Content</th><th>Status</th></tr></thead>
@@ -284,8 +284,8 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
         <tr><td>Geometry</td><td>separating the k axes, shadow estimates, visit schedules, logarithmic envelopes, cutoffs for the union tube</td><td><span class="st ok">proved</span></td></tr>
         <tr><td>Window selection</td><td>the interval case and the nonlinear case (the two branches of the original proof), the dichotomy for discrete profiles</td><td><span class="st ok">proved</span></td></tr>
         <tr><td>Operator layer</td><td>path-polynomial expansion and truncation, chain reconstruction, Taylor expansions, counting words with few switches, and more</td><td><span class="st ok">proved</span></td></tr>
-        <tr><td>Semiclassical input</td><td>label observables at logarithmic time scales: the measure lies on the energy shell and is invariant, commutators within a block, uniform one-site and adjacent-pair limits</td><td><span class="st run">in progress</span></td></tr>
-        <tr><td>Assembly</td><td>from the finite occupation estimate to the mass bound, then to the root</td><td><span class="st run">waits on the above</span></td></tr>
+        <tr><td>Semiclassical input</td><td>label observables at logarithmic time scales: the measure lies on the energy shell and is invariant, commutators within a block, uniform one-site and adjacent-pair limits</td><td><span class="st ok">proved</span></td></tr>
+        <tr><td>Assembly</td><td>from the finite occupation estimate to the mass bound, then to the root</td><td><span class="st ok">proved</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -316,7 +316,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 <header>
   <span class="eyebrow">QUE 形式化 · 后续结果 · 2026 年 11 月</span>
   <h1>严格闭轨质量界：在原定理之上又往前走了几步</h1>
-  <p class="lede">原定理说：在紧致双曲曲面上，Laplace 本征函数的半经典测度放在一条闭测地线上的质量严格小于一半。在它已经完成的 Lean 形式化之上，我们又证明了三个推广：常数与曲面无关（S0）、对近似本征函数也成立（S1）、对有限条闭测地线的并也成立（S2，运行中）。本页说明它们分别比原来多了什么。</p>
+  <p class="lede">原定理说：在紧致双曲曲面上，Laplace 本征函数的半经典测度放在一条闭测地线上的质量严格小于一半。在它已经完成的 Lean 形式化之上，我们又证明了三个推广：常数与曲面无关（S0）、对近似本征函数也成立（S1）、对有限条闭测地线的并也成立（S2）。本页说明它们分别比原来多了什么。</p>
 </header>
 
 <section>
@@ -332,7 +332,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
   <div class="cards">
     <a class="panel card" href="#s0-zh"><span class="n">S0 · 已证明</span><h3>常数与曲面无关</h3><p class="small">一个 ε 对所有紧致双曲曲面、所有闭测地线同时成立。</p></a>
     <a class="panel card" href="#s1-zh"><span class="n">S1 · 已证明</span><h3>推广到对数拟模</h3><p class="small">频率允许有 o(h/log(1/h)) 的模糊，结论不变。</p></a>
-    <a class="panel card" href="#s2-zh"><span class="n">S2 · 运行中</span><h3>有限条闭测地线的并</h3><p class="small">任意有限条闭测地线上的总质量也不超过 ½ − ε。</p></a>
+    <a class="panel card" href="#s2-zh"><span class="n">S2 · 已证明</span><h3>有限条闭测地线的并</h3><p class="small">任意有限条闭测地线上的总质量也不超过 ½ − ε。</p></a>
   </div>
 </section>
 
@@ -345,7 +345,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
         <tr><td><b>定理 A</b>（原来）</td><td>曲面 M、度量 g、闭测地线 γ</td><td>精确本征函数</td><td>一条闭测地线的提升 Γ<sub>γ</sub></td><td><span class="st base">已形式化</span></td></tr>
         <tr><td><b>S0</b></td><td><b>什么都不依赖</b>（普适常数）</td><td>精确本征函数</td><td>一条闭测地线</td><td><span class="st ok">已证明</span></td></tr>
         <tr><td><b>S1</b></td><td>M、g、γ</td><td><b>谱宽 o(h/log(1/h)) 的拟模</b></td><td>一条闭测地线</td><td><span class="st ok">已证明</span></td></tr>
-        <tr><td><b>S2</b></td><td>M、g 和这一族闭测地线</td><td>精确本征函数</td><td><b>有限条闭测地线提升的并</b></td><td><span class="st run">运行中</span></td></tr>
+        <tr><td><b>S2</b></td><td>M、g 和这一族闭测地线</td><td>精确本征函数</td><td><b>有限条闭测地线提升的并</b></td><td><span class="st ok">已证明</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -477,16 +477,16 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section class="part" id="s2-zh">
-<span class="eyebrow">S2 · 运行中 · 2026-11-24 起</span>
+<span class="eyebrow">S2 · 已证明 · 2026-11-25</span>
 <h2>S2：有限条闭测地线合起来也不超过 ½ − ε</h2>
 <p class="lede">原定理只管一条闭测地线。S2 证明：任取有限条闭测地线 γ<sub>1</sub>, …, γ<sub>k</sub>，半经典测度放在它们提升的并集上的总质量也不超过 ½ − ε。</p>
 <div class="kpis">
-    <div class="panel kpi"><b>43 / 48</b><span>已证明的子目标（11-25 01:00）</span></div>
-    <div class="panel kpi"><b>1</b><span>剩下待证的子目标</span></div>
-    <div class="panel kpi"><b>14</b><span>通过检查的库模块</span></div>
-    <div class="panel kpi"><b>48 小时</b><span>预算</span></div>
+    <div class="panel kpi"><b>约 14 小时</b><span>LOT 树的运行时间（不含宕机）</span></div>
+    <div class="panel kpi"><b>48</b><span>证完的子目标</span></div>
+    <div class="panel kpi"><b>约 12,000 行</b><span>新写的 Lean 证明（197 个文件）</span></div>
+    <div class="panel kpi"><b>0</b><span>新增公理</span></div>
   </div>
-  <div class="callout warn"><b>运行中。</b>根节点还没有证完：最后一个子目标（对数时间尺度上的标签观测量）正在拆分和求证，其余四个节点在等它。根节点被检查器接受后，本页会更新。</div>
+  <div class="callout"><b>已证明。</b>根节点于 2026-11-25 12:58 UTC 被检查器接受（comparator + nanoda）。证明共 414 个定理/引理，没有 <code>sorry</code>，没有新公理。运行途中计算节点宕机过一次，树从保存的状态恢复后完成了最后的检查。</div>
 
 
 
@@ -511,7 +511,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 
 
 
-  <h3>证明的结构（树目前的拆分）</h3>
+  <h3>证明的结构</h3>
   <div class="panel tbl">
     <table>
       <thead><tr><th>部分</th><th>内容</th><th>状态</th></tr></thead>
@@ -519,8 +519,8 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
         <tr><td>几何</td><td>k 根轴彼此分开、影子估计、访问时间表、对数包络、并集管子的截断函数</td><td><span class="st ok">已证明</span></td></tr>
         <tr><td>窗口选择</td><td>区间情形与非线性情形（对应原证明的两个分支）、离散剖面的二分法</td><td><span class="st ok">已证明</span></td></tr>
         <tr><td>算子层</td><td>路径多项式展开与截断、链重构、Taylor 展开、少切换词计数等</td><td><span class="st ok">已证明</span></td></tr>
-        <tr><td>半经典输入</td><td>对数时间尺度上的标签观测量：测度在能量壳上且不变、块内交换子、一点和相邻两点的一致极限</td><td><span class="st run">进行中</span></td></tr>
-        <tr><td>组装</td><td>从有限占据估计到质量上界，再到根节点</td><td><span class="st run">等上一项</span></td></tr>
+        <tr><td>半经典输入</td><td>对数时间尺度上的标签观测量：测度在能量壳上且不变、块内交换子、一点和相邻两点的一致极限</td><td><span class="st ok">已证明</span></td></tr>
+        <tr><td>组装</td><td>从有限占据估计到质量上界，再到根节点</td><td><span class="st ok">已证明</span></td></tr>
       </tbody>
     </table>
   </div>
