@@ -184,7 +184,7 @@ const PLAY=()=>$t("&#9654; Play","&#9654; 播放"), PAUSE=()=>$t("&#10074;&#1007
 <div class="wrap">
 
 <header>
-  <div class="hdr-top"><div class="eyebrow">LOT-I v2 &rarr; v5 · informal option tree · 2026-11-10, updated 2026-11-24</div>
+  <div class="hdr-top"><div class="eyebrow">LOT-I v2 &rarr; v4 · informal option tree · 2026-11-10, updated 2026-11-24</div>
   <div class="seg" role="group" aria-label="Language"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="zh" aria-pressed="false">中文</button></div></div>
   <h1><span lang="en">An improvement tree: many agent sessions build one solver together</span><span lang="zh">Improvement tree：许多 agent session 合作构建一个求解器</span></h1>
   <p class="lede" lang="en">LOT-I v2 lets many agent sessions improve one heuristic solver in parallel, on
@@ -214,28 +214,28 @@ const PLAY=()=>$t("&#9654; Play","&#9654; 播放"), PAUSE=()=>$t("&#10074;&#1007
 </section>
 
 <section id="changes">
-  <h2><span lang="en">What changed after v2 (v3&ndash;v5, 2026-11-17 to 11-24)</span><span lang="zh">v2 之后改了什么（v3&ndash;v5，2026-11-17 至 11-24）</span></h2>
+  <h2><span lang="en">What changed after v2 (v3 and v4, 2026-11-17 to 11-24)</span><span lang="zh">v2 之后改了什么（v3 和 v4，2026-11-17 至 11-24）</span></h2>
   <p><span lang="en">Each change answers something we saw in a run.</span><span lang="zh">每一项都对应运行中实际遇到的问题。</span></p>
   <div class="scroll panel" style="padding:6px 14px"><table class="tbl roles">
     <thead><tr><th></th><th><span lang="en">change</span><span lang="zh">改动</span></th><th><span lang="en">why</span><span lang="zh">原因</span></th></tr></thead>
     <tbody>
-      <tr><td class="mono">eval</td><td><span lang="en">Every evaluation is its own Slurm job: one CPU per instance, all instances at once. While a job waits for resources the tree pauses and the wait does not count.</span><span lang="zh">每次评测是独立的 Slurm 任务：每个实例一个 CPU，所有实例同时跑。等资源时整棵树暂停，等待时间不计入。</span></td><td><span lang="en">One evaluator on 2 CPUs: a tw promote took 14 min, the evaluator was busy 95% of the time.</span><span lang="zh">原来只有 2 个 CPU 做评测：tw 一次 promote 要 14 分钟，评测 95% 的时间都在忙。</span></td></tr>
+      <tr><td class="mono">v3</td><td><span lang="en">Every evaluation is its own Slurm job: one CPU per instance, all instances at once. While a job waits for resources the tree pauses and the wait does not count.</span><span lang="zh">每次评测是独立的 Slurm 任务：每个实例一个 CPU，所有实例同时跑。等资源时整棵树暂停，等待时间不计入。</span></td><td><span lang="en">One evaluator on 2 CPUs: a tw promote took 14 min, the evaluator was busy 95% of the time.</span><span lang="zh">原来只有 2 个 CPU 做评测：tw 一次 promote 要 14 分钟，评测 95% 的时间都在忙。</span></td></tr>
       <tr><td class="mono">v3</td><td><span lang="en"><code>loti eval</code> is the sessions' only measuring tool (high priority; says whether the gate would accept).</span><span lang="zh"><code>loti eval</code> 是 session 唯一的测量工具（高优先级，直接告诉它能否过门）。</span></td><td><span lang="en">Sessions built their own scorers and timing harnesses: local timings on shared CPUs are noise.</span><span lang="zh">session 自己造评分器和计时工具；共享 CPU 上的本地计时全是噪声。</span></td></tr>
       <tr><td class="mono">v3</td><td><span lang="en">Small but consistent gains land: gain &gt; 0.0002 and sign test p &le; 0.01.</span><span lang="zh">小而稳定的提升也能合入：提升 &gt; 0.0002 且符号检验 p &le; 0.01。</span></td><td><span lang="en">26 wins / 4 losses was rejected for a +0.0009 mean near K.</span><span lang="zh">接近最优时，26 胜 4 负因平均只提升 0.0009 被拒。</span></td></tr>
       <tr><td class="mono">v3</td><td><span lang="en">An idea that landed, or failed twice, is not handed out again.</span><span lang="zh">已合入或失败两次的 idea 不再分配。</span></td><td><span lang="en">Sessions were given ideas already in the code.</span><span lang="zh">session 拿到的 idea 早已在代码里。</span></td></tr>
       <tr><td class="mono">v3</td><td><span lang="en">Review loop: AUD answers <em>approve</em>, <em>revise</em> or <em>reject</em>; a revision goes back to the same ARCH session and the same reviewer checks it (up to 3 rounds).</span><span lang="zh">审核循环：AUD 给出通过 / 修改 / 拒绝；修改意见交回同一个 ARCH session，由同一个审核者复核（最多 3 轮）。</span></td><td><span lang="en">13 of 16 proposals were rejected, many &ldquo;fixable in one pass&rdquo;.</span><span lang="zh">16 个提案拒了 13 个，很多是「一轮就能修好」。</span></td></tr>
       <tr><td class="mono">v3</td><td><span lang="en">Two ARCH sessions at once, each given its own direction (core search, stages, instance split, exact parts, portfolio, performance, free).</span><span lang="zh">同时两个 ARCH，各分一个方向（核心搜索、分阶段、拆实例、精确子问题、组合策略、性能、自由）。</span></td><td><span lang="en">New architectures won later champions; parallel ARCHs proposed the same split.</span><span lang="zh">后期 champion 多来自新架构；并行的 ARCH 容易想到同一种拆法。</span></td></tr>
-      <tr><td class="mono">v4</td><td><span lang="en">A revision is bound to its proposal when the request arrives, not when the gate finishes.</span><span lang="zh">修改版在请求到达时就绑定到原提案，而不是等检查结束。</span></td><td><span lang="en">The gate took up to 3 h on glasscut; revisions were dropped and one session made two proposals.</span><span lang="zh">glasscut 的架构检查要 3 小时，修改版被误判作废，还出现了重复提案。</span></td></tr>
-      <tr><td class="mono">v5</td><td><span lang="en">Each session runs in its own PID namespace.</span><span lang="zh">每个 session 运行在独立的 PID 命名空间里。</span></td><td><span lang="en">A session's <code>pkill -f "python3 -"</code> killed two controllers.</span><span lang="zh">一个 session 的 <code>pkill -f "python3 -"</code> 杀掉了两个 controller。</span></td></tr>
-      <tr><td class="mono">v5</td><td><span lang="en">Hold-out: one new failure is tolerated if the mean does not drop; a failure is explained to the sessions (size class, time, value) without naming the instance.</span><span lang="zh">hold-out：平均分不降时容忍 1 个新失败；失败原因（规模、用时、解的质量）告诉 session，但不透露实例。</span></td><td><span lang="en">One fragile hold-out instance kept a better tw solver out for 14 h.</span><span lang="zh">一个脆弱的 hold-out 实例把更好的 tw 求解器挡了 14 小时。</span></td></tr>
-      <tr><td class="mono">v5</td><td><span lang="en">The architecture gate allows a lag of 0.15 + 0.5 &times; (1 &minus; champion mean).</span><span lang="zh">架构检查允许落后 0.15 + 0.5 &times;（1 &minus; champion 均分）。</span></td><td><span lang="en">Every curriculum proposal failed a fixed 0.15 lag.</span><span lang="zh">固定 0.15 时 curriculum 的提案全部过不了。</span></td></tr>
+      <tr><td class="mono">v3</td><td><span lang="en">A revision is bound to its proposal when the request arrives, not when the gate finishes.</span><span lang="zh">修改版在请求到达时就绑定到原提案，而不是等检查结束。</span></td><td><span lang="en">The gate took up to 3 h on glasscut; revisions were dropped and one session made two proposals.</span><span lang="zh">glasscut 的架构检查要 3 小时，修改版被误判作废，还出现了重复提案。</span></td></tr>
+      <tr><td class="mono">v4</td><td><span lang="en">Each session runs in its own PID namespace.</span><span lang="zh">每个 session 运行在独立的 PID 命名空间里。</span></td><td><span lang="en">A session's <code>pkill -f "python3 -"</code> killed two controllers.</span><span lang="zh">一个 session 的 <code>pkill -f "python3 -"</code> 杀掉了两个 controller。</span></td></tr>
+      <tr><td class="mono">v4</td><td><span lang="en">Hold-out: one new failure is tolerated if the mean does not drop; a failure is explained to the sessions (size class, time, value) without naming the instance.</span><span lang="zh">hold-out：平均分不降时容忍 1 个新失败；失败原因（规模、用时、解的质量）告诉 session，但不透露实例。</span></td><td><span lang="en">One fragile hold-out instance kept a better tw solver out for 14 h.</span><span lang="zh">一个脆弱的 hold-out 实例把更好的 tw 求解器挡了 14 小时。</span></td></tr>
+      <tr><td class="mono">v4</td><td><span lang="en">The architecture gate allows a lag of 0.15 + 0.5 &times; (1 &minus; champion mean).</span><span lang="zh">架构检查允许落后 0.15 + 0.5 &times;（1 &minus; champion 均分）。</span></td><td><span lang="en">Every curriculum proposal failed a fixed 0.15 lag.</span><span lang="zh">固定 0.15 时 curriculum 的提案全部过不了。</span></td></tr>
     </tbody>
   </table></div>
 </section>
 
 <section id="v5demo">
-  <h2><span lang="en">Demo (v5): architectures in parallel, reviewed and revised</span><span lang="zh">Demo（v5）：并行提出、审核、修改的架构</span></h2>
-  <p><span lang="en">AHC058 production planning, v5, 12 hours (effective; 17 min of pauses removed). Top: the champion on the hold-out set. Below: one row per proposal, by direction. Hover a row for the reviews. This run (v5 run 1) scored <b>83.8</b> on the hidden set, the same as the paper's GPT-6 Astra; the mean of three v5 runs is 79.9.</span><span lang="zh">AHC058 生产计划，v5，12 小时（有效时间，已去掉 17 分钟暂停）。上：champion 在 hold-out 上的分数。下：每个提案一行，按方向标注，鼠标悬停看审核意见。这一次（v5 第 1 次）隐藏集得分 <b>83.8</b>，与论文 GPT-6 Astra 相同；v5 三次平均 79.9。</span></p>
+  <h2><span lang="en">Demo (v4): architectures in parallel, reviewed and revised</span><span lang="zh">Demo（v4）：并行提出、审核、修改的架构</span></h2>
+  <p><span lang="en">AHC058 production planning, v4, 12 hours (effective; 17 min of pauses removed). Top: the champion on the hold-out set. Below: one row per proposal, by direction. Hover a row for the reviews. This run (v4 run 1) scored <b>83.8</b> on the hidden set, the same as the paper's GPT-6 Astra; the mean of three v4 runs is 79.9.</span><span lang="zh">AHC058 生产计划，v4，12 小时（有效时间，已去掉 17 分钟暂停）。上：champion 在 hold-out 上的分数。下：每个提案一行，按方向标注，鼠标悬停看审核意见。这一次（v4 第 1 次）隐藏集得分 <b>83.8</b>，与论文 GPT-6 Astra 相同；v4 三次平均 79.9。</span></p>
   <div class="panel" style="display:flex;flex-direction:column;gap:10px">
     <div class="rp-controls">
       <button id="v5-play" type="button">&#9654; Play</button>
@@ -244,25 +244,25 @@ const PLAY=()=>$t("&#9654; Play","&#9654; 播放"), PAUSE=()=>$t("&#10074;&#1007
       <span id="v5-time" class="mono">12:00</span>
     </div>
     <div class="rp-kpis" id="v5-kpis"></div>
-    <div class="scroll"><svg id="v5-svg" role="img" aria-label="v5 ahc058 timeline" style="display:block;min-width:760px;width:100%"></svg></div>
+    <div class="scroll"><svg id="v5-svg" role="img" aria-label="v4 ahc058 timeline" style="display:block;min-width:760px;width:100%"></svg></div>
     <p class="foot" id="v5-leg"></p>
   </div>
 </section>
 
 <section id="versions">
-  <h2><span lang="en">Results by version (hidden set, Kimi-K3-relative, 50 = Kimi K3)</span><span lang="zh">各版本结果（隐藏集，Kimi-K3 相对分，50 = Kimi K3）</span></h2>
+  <h2><span lang="en">Results by version (hidden set, Kimi-K3-relative, 50 = Kimi K3; mean of 3 runs)</span><span lang="zh">各版本结果（隐藏集，Kimi-K3 相对分，50 = Kimi K3；3 次平均）</span></h2>
   <div class="scroll"><table class="tbl">
-    <thead><tr><th><span lang="en">task</span><span lang="zh">任务</span></th><th class="num"><span lang="en">paper DeepSeek</span><span lang="zh">论文 DeepSeek</span></th><th class="num"><span lang="en">v2 (mean of 3 runs)</span><span lang="zh">v2（3 次平均）</span></th><th class="num"><span lang="en">+ Slurm eval</span><span lang="zh">+ Slurm 评测</span></th><th class="num">v3</th><th class="num">v4</th><th class="num"><span lang="en">v5 (mean of 3 runs)</span><span lang="zh">v5（3 次平均）</span></th><th class="num"><span lang="en">paper GPT-6 Astra</span><span lang="zh">论文 GPT-6 Astra</span></th></tr></thead>
+    <thead><tr><th><span lang="en">task</span><span lang="zh">任务</span></th><th class="num"><span lang="en">paper DeepSeek</span><span lang="zh">论文 DeepSeek</span></th><th class="num">v2</th><th class="num">v3</th><th class="num">v4</th><th class="num"><span lang="en">paper GPT-6 Astra</span><span lang="zh">论文 GPT-6 Astra</span></th></tr></thead>
     <tbody>
-      <tr><td><code>ahc058</code></td><td class="num">47.9</td><td class="num">79.6</td><td class="num">79.0</td><td class="num">76.1</td><td class="num"><b>80.2</b></td><td class="num">79.9</td><td class="num">83.8</td></tr>
-      <tr><td><code>christmas</code></td><td class="num">66.8</td><td class="num">64.3</td><td class="num">68.1</td><td class="num">69.5</td><td class="num"><b>70.6</b></td><td class="num">67.9</td><td class="num">85.4</td></tr>
-      <tr><td><code>curriculum</code></td><td class="num">46.0</td><td class="num">62.1</td><td class="num">77.1</td><td class="num"><b>87.3</b></td><td class="num">86.6</td><td class="num">77.3</td><td class="num">88.9</td></tr>
-      <tr><td><code>glasscut</code></td><td class="num">29.1</td><td class="num">25.4</td><td class="num">15.6</td><td class="num">52.5</td><td class="num">52.0</td><td class="num"><b>58.1</b></td><td class="num">98.5</td></tr>
-      <tr><td><code>tw</code></td><td class="num">52.9</td><td class="num">49.2</td><td class="num">48.3</td><td class="num">63.4</td><td class="num">56.1</td><td class="num"><b>63.7</b></td><td class="num">87.7</td></tr>
-      <tr><td><b><span lang="en">mean</span><span lang="zh">平均</span></b></td><td class="num">48.5</td><td class="num">56.1</td><td class="num">57.6</td><td class="num"><b>69.8</b></td><td class="num">69.1</td><td class="num">69.4</td><td class="num">88.9</td></tr>
+      <tr><td><code>ahc058</code></td><td class="num">47.9</td><td class="num">79.6</td><td class="num">78.4</td><td class="num"><b>79.9</b></td><td class="num">83.8</td></tr>
+      <tr><td><code>christmas</code></td><td class="num">66.8</td><td class="num">64.3</td><td class="num"><b>69.4</b></td><td class="num">67.9</td><td class="num">85.4</td></tr>
+      <tr><td><code>curriculum</code></td><td class="num">46.0</td><td class="num">62.1</td><td class="num"><b>83.7</b></td><td class="num">77.3</td><td class="num">88.9</td></tr>
+      <tr><td><code>glasscut</code></td><td class="num">29.1</td><td class="num">25.4</td><td class="num">40.0</td><td class="num"><b>58.1</b></td><td class="num">98.5</td></tr>
+      <tr><td><code>tw</code></td><td class="num">52.9</td><td class="num">49.2</td><td class="num">55.9</td><td class="num"><b>63.7</b></td><td class="num">87.7</td></tr>
+      <tr><td><b><span lang="en">mean</span><span lang="zh">平均</span></b></td><td class="num">48.5</td><td class="num">56.1</td><td class="num">65.5</td><td class="num"><b>69.4</b></td><td class="num">88.9</td></tr>
     </tbody>
   </table></div>
-  <p class="foot"><span lang="en">DeepSeek V4.1 Flash (1017) everywhere, 12 effective hours per task; v2 and v5 are means of 3 runs (v2: 61.5, 48.3, 58.6; v5: 77.9, 59.9, 70.4), the other LOT-I columns one run each (the paper: one session, mean of 3 runs). v5 runs 2 and 3 ran at the same time and paused more for resources; each tree got 10&ndash;20 extra minutes for the interruptions. Bold: the best LOT-I value per row. v3&ndash;v5 use 10 IMPROVE sessions per tree (earlier: 3): more compute than the paper's single session. Single runs vary by 10 points or more (v5 glasscut: 80.9, 37.6, 55.7).</span><span lang="zh">全部使用 DeepSeek V4.1 Flash (1017)，每题 12 小时有效时间；v2 和 v5 为 3 次运行的平均（v2：61.5、48.3、58.6；v5：77.9、59.9、70.4），其余 LOT-I 各列各跑一次（论文为单 session、3 次平均）。v5 第 2、3 次同时运行、等资源的暂停更多，每棵树为此补了 10&ndash;20 分钟。加粗：每行 LOT-I 的最好值。v3&ndash;v5 每棵树 10 个 IMPROVE（之前 3 个），算力多于论文的单 session。单次运行的波动可达 10 分以上（v5 glasscut：80.9、37.6、55.7）。</span></p>
+  <p class="foot"><span lang="en">DeepSeek V4.1 Flash (1017) everywhere, 12 effective hours per task, every column the mean of 3 runs (the paper: one session, mean of 3 runs). Run means: v2 61.5 / 48.3 / 58.6; v3 57.6 / 69.8 / 69.1; v4 77.9 / 59.9 / 70.4. The three v3 runs were development steps (Slurm evaluation first, then the v3 changes, then the revision fix) and used 3, then 10 IMPROVE sessions per tree; v4 used 10 throughout: more compute than the paper's single session. Two v4 runs ran at the same time and paused more for resources; each tree got 10&ndash;20 extra minutes. Single runs vary a lot (v4 glasscut: 80.9, 37.6, 55.7). Bold: the best LOT-I value per row.</span><span lang="zh">全部使用 DeepSeek V4.1 Flash (1017)，每题 12 小时有效时间，每列都是 3 次运行的平均（论文为单 session、3 次平均）。各次平均分：v2 61.5 / 48.3 / 58.6；v3 57.6 / 69.8 / 69.1；v4 77.9 / 59.9 / 70.4。v3 的三次是逐步改进的开发过程（先改 Slurm 评测，再加 v3 的改动，再修修改版的 bug），每棵树的 IMPROVE 先是 3 个、后来 10 个；v4 全程 10 个，算力多于论文的单 session。v4 有两次同时运行、等资源的暂停更多，每棵树补了 10&ndash;20 分钟。单次波动很大（v4 glasscut：80.9、37.6、55.7）。加粗：每行 LOT-I 的最好值。</span></p>
 </section>
 
 <section id="replay">
