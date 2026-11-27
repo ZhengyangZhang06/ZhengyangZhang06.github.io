@@ -192,15 +192,12 @@ section>h3:first-child{font-size:17.5px}
 <section>
   <h3>2.4 What we change</h3>
   <ol>
-    <li><b>Read once per node.</b> Stage the toolchain and the instances of the tasks in use onto each compute node's local disk the first time a job lands there (with a lock so it happens once); evaluations, builds and sessions then read locally.</li>
-    <li><b>Never from the login node.</b> The master copy moves to the shared data store; <code>/home</code> on a login node is only for the user.</li>
-    <li><b>Measure before scaling up.</b> Run one tree for an hour and read the per-mount byte counters on the compute nodes (<code>/proc/self/mountstats</code>) before restarting the full experiments.</li>
-    <li><b>Quieter login node.</b> One watcher polling every few minutes instead of dozens polling every minute.</li>
-    <li><b>Stagger the starts.</b> Final judging, new sessions and the next repetition no longer fire on the same event: judging is released in small batches, sessions and trees start a few at a time with gaps between them.</li>
+    <li><b>Each evaluation is a single-CPU job.</b> One instance per Slurm job, one pinned core and its own memory limit, as the paper's per-instance sandbox requires.</li>
+    <li><b>Code and libraries are placed on the test machine's disk in advance.</b> The compiler, Python, the Java runtime, the checkers, the judge scripts and the instances of the tasks in use are copied to the local disk of each compute node before the evaluations start. An evaluation job then reads only from that local disk.</li>
   </ol>
 </section>
 
-<footer>Updated 2026-11-27 (timeline of the alert; old vs new Brev cluster; why reads repeat, measured). Sizes are measured on the old cluster's copy; the traffic volume per evaluation and the page-cache effect are estimates until the measurement in 2.4, step 3.</footer>
+<footer>Updated 2026-11-27 (timeline of the alert; old vs new Brev cluster; why reads repeat, measured). Sizes are measured on the old cluster's copy; the traffic volume per evaluation and the page-cache effect are estimates; they have not been measured on the new cluster.</footer>
 </div>
 
 <!-- ============================ 中文 ============================ -->
@@ -325,15 +322,12 @@ section>h3:first-child{font-size:17.5px}
 <section>
   <h3>2.4 我们怎么改</h3>
   <ol>
-    <li><b>每个节点只读一次。</b>作业第一次落到某个计算节点时，把工具链和本次实验用到的题目实例复制到该节点的本地盘（加锁，只复制一次）；之后的测评、编译和会话都读本地。</li>
-    <li><b>不再从登录节点读。</b>主副本搬到共享数据存储；登录节点上的 <code>/home</code> 只留给人用。</li>
-    <li><b>先测量再放量。</b>恢复完整实验之前，先跑一棵树一小时，读计算节点上每个挂载点的字节计数（<code>/proc/self/mountstats</code>）。</li>
-    <li><b>让登录节点安静下来。</b>用一个每隔几分钟轮询一次的监控脚本，代替几十个每分钟轮询的脚本。</li>
-    <li><b>错开启动。</b>最终评测、新会话和下一次运行不再由同一个事件同时触发：评测分小批放出，会话和树每次只启动几个，中间留出间隔。</li>
+    <li><b>每个测评是一个单 CPU 的作业。</b>每个 Slurm 作业跑一个实例，绑定一个核，有自己的内存上限，和论文按实例划分的沙箱一致。</li>
+    <li><b>代码和库事先放到测评机器的磁盘上。</b>编译器、Python、Java 运行时、checker、评测脚本，以及本次用到的题目实例，在测评开始之前复制到每个计算节点的本地盘上。测评作业只读本地盘。</li>
   </ol>
 </section>
 
-<footer>本页更新于 2026-11-27（补充了告警时间线；老/新 Brev 集群；为什么重复读取及实测）。文件大小是在老集群上的副本上实测的；每次测评的流量和页缓存的效果在 2.4 节第 3 步实测之前都是估计值。</footer>
+<footer>本页更新于 2026-11-27（补充了告警时间线；老/新 Brev 集群；为什么重复读取及实测）。文件大小是在老集群上的副本上实测的；每次测评的流量和页缓存的效果都是估计值，还没有在新集群上实测。</footer>
 </div>
 </main>
 <script>
