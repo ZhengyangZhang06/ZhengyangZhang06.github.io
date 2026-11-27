@@ -192,8 +192,8 @@ section>h3:first-child{font-size:17.5px}
 <section>
   <h3>2.4 What we change</h3>
   <ol>
-    <li><b>Each evaluation is a single-CPU job.</b> One instance per Slurm job, one pinned core and its own memory limit, as the paper's per-instance sandbox requires.</li>
-    <li><b>Code and libraries are placed on the test machine's disk in advance.</b> The compiler, Python, the Java runtime, the checkers, the judge scripts and the instances of the tasks in use are copied to the local disk of each compute node before the evaluations start. An evaluation job then reads only from that local disk.</li>
+    <li><b>Keep one single-CPU job running on each test machine.</b> When it starts, it copies the code and libraries (the compiler, Python, the Java runtime, the checkers, the judge scripts and the instances of the tasks in use) to the machine's local disk. It stays alive for the whole experiment, so that copy stays on the disk; it uses one CPU and does nothing else.</li>
+    <li><b>Evaluations read from that local copy.</b> They remain one instance per job, with one pinned core and their own memory limit as the paper's judging requires, but the code and libraries they load come from the machine's own disk.</li>
   </ol>
 </section>
 
@@ -322,8 +322,8 @@ section>h3:first-child{font-size:17.5px}
 <section>
   <h3>2.4 我们怎么改</h3>
   <ol>
-    <li><b>每个测评是一个单 CPU 的作业。</b>每个 Slurm 作业跑一个实例，绑定一个核，有自己的内存上限，和论文按实例划分的沙箱一致。</li>
-    <li><b>代码和库事先放到测评机器的磁盘上。</b>编译器、Python、Java 运行时、checker、评测脚本，以及本次用到的题目实例，在测评开始之前复制到每个计算节点的本地盘上。测评作业只读本地盘。</li>
+    <li><b>在每台测评机器上一直保持一个单 CPU 的作业。</b>它启动时，把代码和库（编译器、Python、Java 运行时、checker、评测脚本，以及本次用到的题目实例）复制到这台机器的本地盘上。它在整个实验期间一直运行，保证这份副本一直留在盘上；它只占一个 CPU，不做别的事。</li>
+    <li><b>测评从这份本地副本读取。</b>测评仍然是一个实例一个作业，按论文的评测要求绑定一个核、有自己的内存上限，但加载的代码和库都来自这台机器自己的盘。</li>
   </ol>
 </section>
 
