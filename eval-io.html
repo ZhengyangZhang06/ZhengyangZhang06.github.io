@@ -167,7 +167,6 @@ section>h3:first-child{font-size:17.5px}
       <tr><td>Traffic path of one evaluation</td><td>compute node → storage server</td><td>compute node → <b>login node</b></td></tr>
     </tbody>
   </table></div>
-  <div class="callout"><p><b>The assumption.</b> We expected the new cluster to be laid out like the old one, where login and compute nodes see the same <code>/home</code> from a storage server that is neither of them. Nobody on our side knew that on the new cluster <code>/home</code> is the login node's own disk. It was visible: the first <code>df</code> on the new cluster showed <code>/home</code> on the login node's root device, next to a separate shared file system for <code>/data</code>. The agent running the experiments saw that output and did not flag it, so the toolchain stayed under <code>/home</code>.</p></div>
 </section>
 
 <section>
@@ -302,7 +301,6 @@ section>h3:first-child{font-size:17.5px}
       <tr><td>一次测评的流量路径</td><td>计算节点 → 存储服务器</td><td>计算节点 → <b>登录节点</b></td></tr>
     </tbody>
   </table></div>
-  <div class="callout"><p><b>当时的假设。</b>我们以为新集群的布局和老集群一样：登录节点和计算节点看到的是同一个 <code>/home</code>，由第三台存储服务器提供。我们这边没有人知道，新集群的 <code>/home</code> 是登录节点自己的盘。其实这一点是能看出来的：第一次在新集群上运行 <code>df</code>，就显示 <code>/home</code> 在登录节点的系统盘上，而 <code>/data</code> 是另一套共享文件系统。负责跑实验的智能体看到了这个输出，但没有指出来，于是工具链一直留在 <code>/home</code> 下。</p></div>
 </section>
 
 <section>
