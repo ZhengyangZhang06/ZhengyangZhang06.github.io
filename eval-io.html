@@ -79,13 +79,13 @@ section>h3:first-child{font-size:17.5px}
 </header>
 
 <section>
-  <div class="callout warn"><p><b>Short version.</b> Every evaluation starts cold: it copies the submission, rebuilds it from source with the C++ compiler, starts Python (and for some tasks a Java VM) and reads its instances. All of that lived under <code>/home</code>. On the old cluster <code>/home</code> is served by a dedicated storage server; on the new cluster it sits on the login node's own disk, so every compute node read the toolchain and the data <i>through the login node</i>, tens of thousands of times.</p></div>
+  <div class="callout warn"><p><b>Short version.</b> An evaluation copies the submission, rebuilds it from source with the C++ compiler, starts Python (and for some tasks a Java VM) and reads its instances. All of that lived under <code>/home</code>. On the old cluster <code>/home</code> is served by a dedicated storage server; on the new cluster it sits on the login node's own disk, so every compute node read the toolchain and the data <i>through the login node</i>, tens of thousands of times.</p></div>
 </section>
 
 <section class="part-head">
   <span class="eyebrow">Part 1</span>
   <h2>What a TCSExam evaluation reads</h2>
-  <p class="lede">What one evaluation of a candidate solver does, which files it reads, and why it reads them again every time, following the judging rules of the TCSExam paper.</p>
+  <p class="lede">What one evaluation of a candidate solver does, which files it reads, and why, following the judging rules of the TCSExam paper.</p>
 </section>
 
 <section>
@@ -97,13 +97,12 @@ section>h3:first-child{font-size:17.5px}
  ├─ rebuild the submission   bash /app/build.sh   → g++ (compiler, headers, libstdc++, binutils)
  ├─ run the solver           solver INSTANCE OUTPUT LIMIT   (reads the instance file)
  └─ verify + score           task checker (Python; a Java VM for hs/ds; cvc5 for sygus; drat-trim for qbf)</pre>
-  <p>Nothing of this is kept between evaluations: the next one starts from scratch.</p>
 </section>
 
 <section>
-  <h3>1.2 What it reads, every time</h3>
+  <h3>1.2 What it reads</h3>
   <div class="tbl"><table>
-    <thead><tr><th>What</th><th>Where</th><th>Size</th><th>Why every time</th></tr></thead>
+    <thead><tr><th>What</th><th>Where</th><th>Size</th><th>Why it is read</th></tr></thead>
     <tbody>
       <tr><td>Python interpreter + standard library</td><td><code>solver-env/py312</code></td><td class="num">71 MB (reads ~10–20 MB)</td><td>runs the judge script; one start per job</td></tr>
       <tr><td>C++ compiler</td><td><code>solver-env/gcc12</code> (gcc11 for job-shop)</td><td class="num">531 MB; one build ≈ 100 MB (<code>cc1plus</code> alone 39 MB)</td><td>the judge rebuilds the submission from source, exactly as the official judge does</td></tr>
@@ -117,18 +116,18 @@ section>h3:first-child{font-size:17.5px}
 </section>
 
 <section>
-  <h3>1.3 Why the same files are read again on every evaluation</h3>
-  <p>Our evaluation reproduces the paper's final solver judging (TCSExam, Appendix D.2 and the task instructions) as closely as we can without Docker. Each of its rules turns into reads that repeat:</p>
+  <h3>1.3 Why an evaluation reads these files</h3>
+  <p>Our evaluation reproduces the paper's final solver judging (TCSExam, Appendix D.2 and the task instructions) as closely as we can without Docker. Each of its rules determines part of what is read:</p>
   <div class="tbl"><table>
-    <thead><tr><th>What repeats</th><th>The rule in the paper's judging it comes from</th></tr></thead>
+    <thead><tr><th>What is read</th><th>The rule in the paper's judging it comes from</th></tr></thead>
     <tbody>
-      <tr><td><b>A full rebuild from source in every evaluation unit</b>: the compiler, a few hundred headers, the assembler and the linker are loaded again each time. Final judging is one unit per instance, so the same program is compiled once per instance (85 times for job-shop).</td><td>“The frozen program is <i>rebuilt</i> and evaluated under the task's separate execution limits.” The official worker runs the frozen checker “in a fresh Docker worker”, and the task instructions say the verifier rebuilds <code>/app</code> from what was left there. Submissions also hard-code <code>/app</code>, so every unit gets its own fresh <code>/app</code> and runs <code>build.sh</code> in it.</td></tr>
-      <tr><td><b>One job (or job step) per instance</b>, each a new process tree that starts Python and the task's checker from scratch.</td><td>“Per-instance tasks limit each instance separately.” “We use up to ten isolated sandboxes concurrently … Each instance retains the specified time, CPU, and memory limits.” The instructions specify one core and a fixed memory reservation per instance. A separate job with one pinned core and its own memory limit is how we give each instance exactly that. (The six shared-pool tasks are judged as one group, as the paper requires.)</td></tr>
-      <tr><td><b>The verifier starts again for every instance</b>; for hitting set and dominating set that is one Java VM per instance.</td><td>The paper judges with each task's own frozen checker, unchanged. For these two tasks the checker is the official PACE Java verifier, called once per instance.</td></tr>
+      <tr><td><b>A full rebuild from source in every evaluation unit</b>: the compiler, a few hundred headers, the assembler and the linker are loaded. Final judging is one unit per instance, so the program is built once per instance (85 builds for job-shop).</td><td>“The frozen program is <i>rebuilt</i> and evaluated under the task's separate execution limits.” The official worker runs the frozen checker “in a fresh Docker worker”, and the task instructions say the verifier rebuilds <code>/app</code> from what was left there. Submissions also hard-code <code>/app</code>, so every unit gets its own fresh <code>/app</code> and runs <code>build.sh</code> in it.</td></tr>
+      <tr><td><b>One job (or job step) per instance</b>, each a new process tree that starts Python and the task's checker.</td><td>“Per-instance tasks limit each instance separately.” “We use up to ten isolated sandboxes concurrently … Each instance retains the specified time, CPU, and memory limits.” The instructions specify one core and a fixed memory reservation per instance. A separate job with one pinned core and its own memory limit is how we give each instance exactly that. (The six shared-pool tasks are judged as one group, as the paper requires.)</td></tr>
+      <tr><td><b>The verifier is started for each instance</b>; for hitting set and dominating set that is one Java VM per instance.</td><td>The paper judges with each task's own frozen checker, unchanged. For these two tasks the checker is the official PACE Java verifier, called once per instance.</td></tr>
       <tr><td><b>The same procedure inside the trees</b> (screen / promote / hold-out), only with shorter limits and fewer instances.</td><td>So that a candidate's in-tree score measures what the final judging will measure: same rebuild, same isolation, same checker.</td></tr>
     </tbody>
   </table></div>
-  <p>On top of these rules, two properties of a network file system make every one of those starts reach the file server:</p>
+  <p>On top of these rules, two properties of a network file system make these reads reach the file server:</p>
   <ul>
     <li><b>Every open is checked with the server.</b> NFS guarantees close-to-open consistency: when a process opens a file it asks the server whether the file changed, even when the contents are already in the node's memory.</li>
     <li><b>Failed lookups cost a round trip too.</b> The compiler tries several include directories for each header; the shell searches every <code>PATH</code> directory for each command (including directories under <code>/home</code>); Python and the compiler resolve <code>/home</code>, <code>/home/…</code> component by component. Each miss is a request to the server.</li>
@@ -138,14 +137,14 @@ section>h3:first-child{font-size:17.5px}
 </section>
 
 <section>
-  <h3>1.4 Why every evaluation is a new job</h3>
+  <h3>1.4 Why each evaluation is its own job</h3>
   <p>The obvious alternative is to give each round (or each tree) one big node and run all its evaluations there. We do not, for two reasons:</p>
   <ul>
     <li><b>Queuing wastes time.</b> Evaluation load is bursty: after an architecture change ten sessions submit at once, each promote check is 30 instances × up to a minute. On one fixed node those bursts queue behind each other, and a tree pauses while its gate waits for a result. Separate jobs spread over every free core in the cluster, so a burst finishes in about the time of one evaluation.</li>
     <li><b>Queuing makes the data wrong.</b> Solver scores depend on how much work fits into a wall-clock limit. If evaluations share an oversubscribed node, they compete for cores, memory bandwidth and caches, and the same solver scores differently depending on what else is running. The official judge gives every instance one pinned core with its own memory limit; one job (or job step) per instance reproduces exactly that, so in-tree scores are comparable to the final hidden score and to each other.</li>
   </ul>
-  <p>The price is the cold start of 1.2 and 1.3: every job reloads the same toolchain and data. That is fine when the files come from a storage server close to the compute nodes, and not fine when they come from a login node.</p>
-  <p class="small">On the new cluster compute nodes cannot submit jobs, so there the evaluations of a tree run as Slurm job steps inside the tree's multi-node allocation (one step per instance, same pinning and limits), and final judging runs as Slurm arrays from the login node. Both start cold in the same way.</p>
+  <p>This is where the reads of 1.2 and 1.3 come from: each job loads the toolchain and its data. That is fine when the files come from a storage server close to the compute nodes, and not fine when they come from a login node.</p>
+  <p class="small">On the new cluster compute nodes cannot submit jobs, so there the evaluations of a tree run as Slurm job steps inside the tree's multi-node allocation (one step per instance, same pinning and limits), and final judging runs as Slurm arrays from the login node. Both read the files in the same way.</p>
 </section>
 
 <section class="part-head">
@@ -209,17 +208,17 @@ section>h3:first-child{font-size:17.5px}
 <header>
   <span class="eyebrow">LOT-I · TCSExam 求解题实验 · 基础设施说明 · 2026 年 11 月</span>
   <h1>每次测评读了什么，以及为什么一个集群被告警</h1>
-  <p class="lede">LOT-I 的每棵树要对候选程序做成千上万次测评，每次都在一个新的 Slurm 作业里进行。在老集群上这没有问题；同样的脚本放到新集群，却让登录节点的磁盘产生了大量网络流量，整个集群被云服务商告警。本页说明每次测评读了什么、为什么每次测评单独开一个作业，以及两台机器的区别。</p>
+  <p class="lede">LOT-I 的每棵树要对候选程序做成千上万次测评，每次都在一个新的 Slurm 作业里进行。在老集群上这没有问题；同样的脚本放到新集群，却让登录节点的磁盘产生了大量网络流量，整个集群被云服务商告警。本页说明测评读了什么、为什么每个测评单独开一个作业，以及两台机器的区别。</p>
 </header>
 
 <section>
-  <div class="callout warn"><p><b>简短版。</b>每次测评都是冷启动：复制一份提交的代码，用 C++ 编译器从源码重新编译，启动 Python（有的题还要启动 Java 虚拟机），再读实例。这些东西都放在 <code>/home</code> 下。老集群的 <code>/home</code> 由一台专门的存储服务器提供；新集群的 <code>/home</code> 却在登录节点自己的磁盘上，于是每个计算节点都<i>经由登录节点</i>读编译器和数据，读了几万次。</p></div>
+  <div class="callout warn"><p><b>简短版。</b>一次测评要复制一份提交的代码，用 C++ 编译器从源码重新编译，启动 Python（有的题还要启动 Java 虚拟机），再读实例。这些东西都放在 <code>/home</code> 下。老集群的 <code>/home</code> 由一台专门的存储服务器提供；新集群的 <code>/home</code> 却在登录节点自己的磁盘上，于是每个计算节点都<i>经由登录节点</i>读编译器和数据，读了几万次。</p></div>
 </section>
 
 <section class="part-head">
   <span class="eyebrow">第一部分</span>
   <h2>TCSExam 测评要读什么</h2>
-  <p class="lede">一次候选程序的测评做了什么、读了哪些文件，以及按照 TCSExam 论文的评测规则，为什么每次都要重新读一遍。</p>
+  <p class="lede">一次候选程序的测评做了什么、读了哪些文件，以及按照 TCSExam 论文的评测规则，为什么要读这些文件。</p>
 </section>
 
 <section>
@@ -231,13 +230,12 @@ section>h3:first-child{font-size:17.5px}
  ├─ 重新编译       bash /app/build.sh   → g++（编译器、头文件、libstdc++、binutils）
  ├─ 运行程序       solver INSTANCE OUTPUT LIMIT（读实例文件）
  └─ 验证并打分     题目自带的 checker（Python；hs/ds 用 Java 虚拟机；sygus 用 cvc5；qbf 用 drat-trim）</pre>
-  <p>两次测评之间什么都不保留，下一次又从头开始。</p>
 </section>
 
 <section>
-  <h3>1.2 每次都要读的东西</h3>
+  <h3>1.2 要读的东西</h3>
   <div class="tbl"><table>
-    <thead><tr><th>内容</th><th>位置</th><th>大小</th><th>为什么每次都读</th></tr></thead>
+    <thead><tr><th>内容</th><th>位置</th><th>大小</th><th>为什么要读</th></tr></thead>
     <tbody>
       <tr><td>Python 解释器和标准库</td><td><code>solver-env/py312</code></td><td class="num">71 MB（实际读约 10–20 MB）</td><td>评测脚本由它运行，每个作业启动一次</td></tr>
       <tr><td>C++ 编译器</td><td><code>solver-env/gcc12</code>（job-shop 用 gcc11）</td><td class="num">531 MB；一次编译约 100 MB（<code>cc1plus</code> 本身 39 MB）</td><td>评测会像官方评测一样，把提交的代码从源码重新编译</td></tr>
@@ -251,18 +249,18 @@ section>h3:first-child{font-size:17.5px}
 </section>
 
 <section>
-  <h3>1.3 为什么每次测评都要把同样的文件再读一遍</h3>
-  <p>我们的测评在不用 Docker 的前提下，尽量照搬论文的最终评测流程（TCSExam 附录 D.2 和各题的任务说明）。论文评测的每一条规则，落到实现上都会变成重复的读取：</p>
+  <h3>1.3 为什么测评要读这些文件</h3>
+  <p>我们的测评在不用 Docker 的前提下，尽量照搬论文的最终评测流程（TCSExam 附录 D.2 和各题的任务说明）。论文评测的每一条规则，落到实现上都决定了要读哪些文件：</p>
   <div class="tbl"><table>
-    <thead><tr><th>重复的事</th><th>来自论文评测的哪条规则</th></tr></thead>
+    <thead><tr><th>读的内容</th><th>来自论文评测的哪条规则</th></tr></thead>
     <tbody>
-      <tr><td><b>每个测评单元都从源码完整重新编译</b>：每次都重新加载编译器、几百个头文件、汇编器和链接器。最终评测是一个实例一个单元，所以同一个程序每个实例编译一遍（job-shop 是 85 遍）。</td><td>“The frozen program is <i>rebuilt</i> and evaluated under the task's separate execution limits”（冻结的程序会被重新编译，再按题目单独规定的执行限制评测）。官方 worker 在“a fresh Docker worker”（一个全新的 Docker 容器）里运行冻结的 checker；任务说明也写明，评测器会用留在 <code>/app</code> 里的内容重新编译。提交的代码还会写死 <code>/app</code> 路径，所以每个单元都有自己全新的 <code>/app</code>，并在里面运行 <code>build.sh</code>。</td></tr>
-      <tr><td><b>每个实例一个作业（或作业步）</b>，每次都是新的进程，从头启动 Python 和题目的 checker。</td><td>“Per-instance tasks limit each instance separately”（按实例计时的题目，每个实例单独限制）。“We use up to ten isolated sandboxes concurrently … Each instance retains the specified time, CPU, and memory limits”（最多同时用十个隔离的沙箱，每个实例都保有规定的时间、CPU 和内存限制）。任务说明规定每个实例一个核、固定的内存。单独一个作业、绑定一个核、有自己的内存上限，就是我们给每个实例提供这些条件的方式。（六道共享时间池的题按论文要求作为一组评测。）</td></tr>
-      <tr><td><b>每个实例都重新启动验证器</b>；hitting set 和 dominating set 是每个实例启动一次 Java 虚拟机。</td><td>论文用每道题自带的、冻结的 checker 原样评测。这两道题的 checker 是 PACE 官方的 Java 验证器，每个实例调用一次。</td></tr>
+      <tr><td><b>每个测评单元都从源码完整重新编译</b>：要加载编译器、几百个头文件、汇编器和链接器。最终评测是一个实例一个单元，所以程序每个实例编译一次（job-shop 共 85 次）。</td><td>“The frozen program is <i>rebuilt</i> and evaluated under the task's separate execution limits”（冻结的程序会被重新编译，再按题目单独规定的执行限制评测）。官方 worker 在“a fresh Docker worker”（一个全新的 Docker 容器）里运行冻结的 checker；任务说明也写明，评测器会用留在 <code>/app</code> 里的内容重新编译。提交的代码还会写死 <code>/app</code> 路径，所以每个单元都有自己全新的 <code>/app</code>，并在里面运行 <code>build.sh</code>。</td></tr>
+      <tr><td><b>每个实例一个作业（或作业步）</b>，每个都是新的进程，启动 Python 和题目的 checker。</td><td>“Per-instance tasks limit each instance separately”（按实例计时的题目，每个实例单独限制）。“We use up to ten isolated sandboxes concurrently … Each instance retains the specified time, CPU, and memory limits”（最多同时用十个隔离的沙箱，每个实例都保有规定的时间、CPU 和内存限制）。任务说明规定每个实例一个核、固定的内存。单独一个作业、绑定一个核、有自己的内存上限，就是我们给每个实例提供这些条件的方式。（六道共享时间池的题按论文要求作为一组评测。）</td></tr>
+      <tr><td><b>每个实例启动一次验证器</b>；hitting set 和 dominating set 是每个实例启动一次 Java 虚拟机。</td><td>论文用每道题自带的、冻结的 checker 原样评测。这两道题的 checker 是 PACE 官方的 Java 验证器，每个实例调用一次。</td></tr>
       <tr><td><b>树内测评（screen / promote / hold-out）用同一套流程</b>，只是时间更短、实例更少。</td><td>这样候选程序在树内拿到的分数，衡量的就是最终评测会衡量的东西：同样的重新编译、同样的隔离、同样的 checker。</td></tr>
     </tbody>
   </table></div>
-  <p>在这些规则之上，网络文件系统的两个特性，让每一次启动都会打到文件服务器上：</p>
+  <p>在这些规则之上，网络文件系统的两个特性，让这些读取都会打到文件服务器上：</p>
   <ul>
     <li><b>每次打开文件都要和服务器确认。</b>NFS 保证“打开-关闭一致性”：进程打开一个文件时，要先问服务器文件有没有变，即使内容已经缓存在本机内存里。</li>
     <li><b>找不到的文件也要走一次网络。</b>编译器为每个头文件依次尝试好几个 include 目录；shell 执行每条命令前都要在 <code>PATH</code> 的每个目录里找一遍（包括 <code>/home</code> 下的目录）；Python 和编译器会把 <code>/home</code>、<code>/home/…</code> 逐级解析。每一次没找到，都是一次对服务器的请求。</li>
@@ -272,14 +270,14 @@ section>h3:first-child{font-size:17.5px}
 </section>
 
 <section>
-  <h3>1.4 为什么每次测评都开一个新作业</h3>
+  <h3>1.4 为什么每个测评单独开一个作业</h3>
   <p>一个直接的替代方案是：每一轮（或每棵树）分配一个大节点，所有测评都在上面跑。我们没有这样做，原因有两个：</p>
   <ul>
     <li><b>排队浪费时间。</b>测评的负载是突发的：一次架构变更之后，十个会话会同时提交测评，每次 promote 检查是 30 个实例、每个最多一分钟。固定在一个节点上，这些突发的测评就会互相排队，而树在等测评结果的时候是暂停的。分成单独的作业，就能分散到整个集群所有空闲的核上，一波突发测评大约只要一次测评的时间就跑完。</li>
     <li><b>排队让数据不准。</b>求解程序的分数取决于在限定时间内能做多少计算。如果测评挤在一个超额分配的节点上，就会抢核、抢内存带宽、抢缓存，同一个程序的分数会随着旁边跑着什么而变化。官方评测给每个实例一个绑定的核和独立的内存上限；每个实例一个作业（或作业步）正好复现这一点，树内的分数才能和最终隐藏集分数、以及彼此之间相互比较。</li>
   </ul>
-  <p>代价就是 1.2、1.3 节说的冷启动：每个作业都要重新加载同一套工具链和数据。文件来自离计算节点很近的存储服务器时，这没有问题；来自登录节点时，就出问题了。</p>
-  <p class="small">新集群的计算节点不能提交作业，所以在那里，一棵树的测评是在这棵树的多节点分配里用 Slurm 作业步来跑的（每个实例一个作业步，绑核和限制都一样），最终评测则从登录节点以 Slurm 数组提交。两种方式都同样是冷启动。</p>
+  <p>1.2、1.3 节说的读取就来自这里：每个作业都要加载工具链和它的数据。文件来自离计算节点很近的存储服务器时，这没有问题；来自登录节点时，就出问题了。</p>
+  <p class="small">新集群的计算节点不能提交作业，所以在那里，一棵树的测评是在这棵树的多节点分配里用 Slurm 作业步来跑的（每个实例一个作业步，绑核和限制都一样），最终评测则从登录节点以 Slurm 数组提交。两种方式读文件的方式相同。</p>
 </section>
 
 <section class="part-head">
