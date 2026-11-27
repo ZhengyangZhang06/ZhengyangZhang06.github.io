@@ -107,18 +107,39 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>3. Why every evaluation is a new job</h2>
+  <h2>3. Why the same files are read again on every evaluation</h2>
+  <p>Our evaluation reproduces the paper's final solver judging (TCSExam, Appendix D.2 and the task instructions) as closely as we can without Docker. Each of its rules turns into reads that repeat:</p>
+  <div class="tbl"><table>
+    <thead><tr><th>What repeats</th><th>The rule in the paper's judging it comes from</th></tr></thead>
+    <tbody>
+      <tr><td><b>A full rebuild from source in every evaluation unit</b>: the compiler, a few hundred headers, the assembler and the linker are loaded again each time. Final judging is one unit per instance, so the same program is compiled once per instance (85 times for job-shop).</td><td>“The frozen program is <i>rebuilt</i> and evaluated under the task's separate execution limits.” The official worker runs the frozen checker “in a fresh Docker worker”, and the task instructions say the verifier rebuilds <code>/app</code> from what was left there. Submissions also hard-code <code>/app</code>, so every unit gets its own fresh <code>/app</code> and runs <code>build.sh</code> in it.</td></tr>
+      <tr><td><b>One job (or job step) per instance</b>, each a new process tree that starts Python and the task's checker from scratch.</td><td>“Per-instance tasks limit each instance separately.” “We use up to ten isolated sandboxes concurrently … Each instance retains the specified time, CPU, and memory limits.” The instructions specify one core and a fixed memory reservation per instance. A separate job with one pinned core and its own memory limit is how we give each instance exactly that. (The six shared-pool tasks are judged as one group, as the paper requires.)</td></tr>
+      <tr><td><b>The verifier starts again for every instance</b>; for hitting set and dominating set that is one Java VM per instance.</td><td>The paper judges with each task's own frozen checker, unchanged. For these two tasks the checker is the official PACE Java verifier, called once per instance.</td></tr>
+      <tr><td><b>The same procedure inside the trees</b> (screen / promote / hold-out), only with shorter limits and fewer instances.</td><td>So that a candidate's in-tree score measures what the final judging will measure: same rebuild, same isolation, same checker.</td></tr>
+    </tbody>
+  </table></div>
+  <p>On top of these rules, two properties of a network file system make every one of those starts reach the file server:</p>
+  <ul>
+    <li><b>Every open is checked with the server.</b> NFS guarantees close-to-open consistency: when a process opens a file it asks the server whether the file changed, even when the contents are already in the node's memory.</li>
+    <li><b>Failed lookups cost a round trip too.</b> The compiler tries several include directories for each header; the shell searches every <code>PATH</code> directory for each command (including directories under <code>/home</code>); Python and the compiler resolve <code>/home</code>, <code>/home/…</code> component by component. Each miss is a request to the server.</li>
+  </ul>
+  <p>And the jobs are short and run under tight memory limits, so file pages one job brought into memory are easily reclaimed before the next job on that node needs them (likely; not measured).</p>
+  <p class="small">Measured with <code>strace</code> on one real in-tree evaluation (cluster editing, one instance, 3.8 s, on the old cluster): about 8,000 file-system operations on network storage, about 1,000 of them for files that do not exist, 277 files opened, about 110 MB read — Python 30 MB, the C++ compiler <code>cc1plus</code> 39 MB, assembler, linker and shared libraries 30 MB, headers 4 MB. The instance itself was a few KB.</p>
+</section>
+
+<section>
+  <h2>4. Why every evaluation is a new job</h2>
   <p>The obvious alternative is to give each round (or each tree) one big node and run all its evaluations there. We do not, for two reasons:</p>
   <ul>
     <li><b>Queuing wastes time.</b> Evaluation load is bursty: after an architecture change ten sessions submit at once, each promote check is 30 instances × up to a minute. On one fixed node those bursts queue behind each other, and a tree pauses while its gate waits for a result. Separate jobs spread over every free core in the cluster, so a burst finishes in about the time of one evaluation.</li>
     <li><b>Queuing makes the data wrong.</b> Solver scores depend on how much work fits into a wall-clock limit. If evaluations share an oversubscribed node, they compete for cores, memory bandwidth and caches, and the same solver scores differently depending on what else is running. The official judge gives every instance one pinned core with its own memory limit; one job (or job step) per instance reproduces exactly that, so in-tree scores are comparable to the final hidden score and to each other.</li>
   </ul>
-  <p>The price is the cold start of section 2: every job reloads the same toolchain and data. That is fine when the files come from a storage server close to the compute nodes, and not fine when they come from a login node.</p>
+  <p>The price is the cold start of sections 2 and 3: every job reloads the same toolchain and data. That is fine when the files come from a storage server close to the compute nodes, and not fine when they come from a login node.</p>
   <p class="small">On the new cluster compute nodes cannot submit jobs, so there the evaluations of a tree run as Slurm job steps inside the tree's multi-node allocation (one step per instance, same pinning and limits), and final judging runs as Slurm arrays from the login node. Both start cold in the same way.</p>
 </section>
 
 <section>
-  <h2>4. The two machines</h2>
+  <h2>5. The two machines</h2>
   <div class="tbl"><table>
     <thead><tr><th></th><th>Old cluster (Brev)</th><th>New cluster (Brev, GCP)</th></tr></thead>
     <tbody>
@@ -134,7 +155,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>5. Why it happened</h2>
+  <h2>6. Why it happened</h2>
   <p>The scripts were written on the old cluster, where <code>/home</code> comes from a real file server, and moved unchanged to the new cluster. There the same path belongs to the login node: an ordinary VM whose disk and network card suddenly served compilers, runtimes and instances to every evaluation on 19 nodes. The provider reported about <b>8 million packets within 10 minutes around 15:39 UTC on 26 November</b> (23:39 Beijing time). That is exactly when several of our things were scheduled to start at the same moment.</p>
   <h3>The 20 minutes before the alert</h3>
   <div class="tbl"><table>
@@ -142,30 +163,29 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
     <tbody>
       <tr><td class="num">15:19</td><td>The 10 LOT-I trees of repetitions 1 and 2 reached their 12-hour deadline together (within a few minutes of each other)</td><td>—</td></tr>
       <tr><td class="num">right after</td><td>Their 10 judges submitted the <b>final hidden-set judging at once</b>: one job per instance, about 400 instances per repetition, up to 30 in parallel per task — <b>up to ~300 cold starts at the same moment</b></td><td>per job: Python, a full rebuild (compiler + hundreds of headers), the instance; one Java VM per instance for hitting / dominating set</td></tr>
-      <tr><td class="num">≈ 15:20</td><td>The two allocations freed 768 CPUs, so <b>13 queued single sessions started together</b></td><td>per session: a copy of the agent CLI binary (~200 MB) and of the checker directory, then the model starts compiling</td></tr>
-      <tr><td class="num">≈ 15:25–15:30</td><td>A watcher (polling every 5 min) saw both allocations gone and <b>started repetition 3: 5 more trees</b>, each launching ~10 sessions and its first evaluations</td><td>per tree: the agent CLI binary and the toolchain copy; then the same cold starts as above</td></tr>
+      <tr><td class="num">≈ 15:20</td><td>The two allocations freed 768 CPUs, so <b>13 queued single sessions started together</b></td><td>per session: a copy of the checker directory, then the model starts compiling and running self-tests</td></tr>
+      <tr><td class="num">≈ 15:25–15:30</td><td>A watcher (polling every 5 min) saw both allocations gone and <b>started repetition 3: 5 more trees</b>, each launching ~10 sessions and its first evaluations</td><td>per tree: a copy of the checker directory; then the same cold starts as above</td></tr>
     </tbody>
   </table></div>
   <p class="small">Reconstructed from the trees' deadlines and the launch scripts; the cluster was unreachable afterwards, so the times are not yet checked against its logs.</p>
   <h3>Why so many packets, not just bytes</h3>
-  <p>8 million packets in 10 minutes is about 13,000 per second. NFS does not only move file contents: every file a process opens is first looked up and its attributes checked, each a small request and reply. One C++ build opens a few hundred header files; a few hundred builds starting together turn into a flood of small metadata packets on top of the bulk reads (agent binary, compiler, JDK, instances).</p>
+  <p>8 million packets in 10 minutes is about 13,000 per second. NFS does not only move file contents: every file a process opens is first looked up and its attributes checked, each a small request and reply. One C++ build opens a few hundred header files; a few hundred builds starting together turn into a flood of small metadata packets on top of the bulk reads (Python, compiler, JDK, instances).</p>
   <p>So the alert was not the steady load of a running experiment but a <b>burst we scheduled ourselves</b>: final judging of ten trees, 13 sessions and five new trees were all triggered by the same event, the end of repetitions 1 and 2.</p>
   <p>Nothing in the evaluations themselves needs that traffic: everything read is identical for the whole experiment.</p>
 </section>
 
 <section>
-  <h2>6. What we change</h2>
+  <h2>7. What we change</h2>
   <ol>
     <li><b>Read once per node.</b> Stage the toolchain and the instances of the tasks in use onto each compute node's local disk the first time a job lands there (with a lock so it happens once); evaluations, builds and sessions then read locally.</li>
     <li><b>Never from the login node.</b> The master copy moves to the shared data store; <code>/home</code> on a login node is only for the user.</li>
     <li><b>Measure before scaling up.</b> Run one tree for an hour and read the per-mount byte counters on the compute nodes (<code>/proc/self/mountstats</code>) before restarting the full experiments.</li>
     <li><b>Quieter login node.</b> One watcher polling every few minutes instead of dozens polling every minute.</li>
     <li><b>Stagger the starts.</b> Final judging, new sessions and the next repetition no longer fire on the same event: judging is released in small batches, sessions and trees start a few at a time with gaps between them.</li>
-    <li><b>No per-session copies from home.</b> The agent CLI binary and the toolchain are placed once on the shared store or the node's local disk, not copied out of <code>/home</code> by every session and tree.</li>
   </ol>
 </section>
 
-<footer>Updated 2026-11-27 (timeline of the alert; old vs new Brev cluster). Sizes are measured on the old cluster's copy; the traffic volume per evaluation and the page-cache effect are estimates until the measurement in step 3.</footer>
+<footer>Updated 2026-11-27 (timeline of the alert; old vs new Brev cluster; why reads repeat, measured). Sizes are measured on the old cluster's copy; the traffic volume per evaluation and the page-cache effect are estimates until the measurement in section 7, step 3.</footer>
 </div>
 
 <!-- ============================ 中文 ============================ -->
@@ -209,18 +229,39 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>3. 为什么每次测评都开一个新作业</h2>
+  <h2>3. 为什么每次测评都要把同样的文件再读一遍</h2>
+  <p>我们的测评在不用 Docker 的前提下，尽量照搬论文的最终评测流程（TCSExam 附录 D.2 和各题的任务说明）。论文评测的每一条规则，落到实现上都会变成重复的读取：</p>
+  <div class="tbl"><table>
+    <thead><tr><th>重复的事</th><th>来自论文评测的哪条规则</th></tr></thead>
+    <tbody>
+      <tr><td><b>每个测评单元都从源码完整重新编译</b>：每次都重新加载编译器、几百个头文件、汇编器和链接器。最终评测是一个实例一个单元，所以同一个程序每个实例编译一遍（job-shop 是 85 遍）。</td><td>“The frozen program is <i>rebuilt</i> and evaluated under the task's separate execution limits”（冻结的程序会被重新编译，再按题目单独规定的执行限制评测）。官方 worker 在“a fresh Docker worker”（一个全新的 Docker 容器）里运行冻结的 checker；任务说明也写明，评测器会用留在 <code>/app</code> 里的内容重新编译。提交的代码还会写死 <code>/app</code> 路径，所以每个单元都有自己全新的 <code>/app</code>，并在里面运行 <code>build.sh</code>。</td></tr>
+      <tr><td><b>每个实例一个作业（或作业步）</b>，每次都是新的进程，从头启动 Python 和题目的 checker。</td><td>“Per-instance tasks limit each instance separately”（按实例计时的题目，每个实例单独限制）。“We use up to ten isolated sandboxes concurrently … Each instance retains the specified time, CPU, and memory limits”（最多同时用十个隔离的沙箱，每个实例都保有规定的时间、CPU 和内存限制）。任务说明规定每个实例一个核、固定的内存。单独一个作业、绑定一个核、有自己的内存上限，就是我们给每个实例提供这些条件的方式。（六道共享时间池的题按论文要求作为一组评测。）</td></tr>
+      <tr><td><b>每个实例都重新启动验证器</b>；hitting set 和 dominating set 是每个实例启动一次 Java 虚拟机。</td><td>论文用每道题自带的、冻结的 checker 原样评测。这两道题的 checker 是 PACE 官方的 Java 验证器，每个实例调用一次。</td></tr>
+      <tr><td><b>树内测评（screen / promote / hold-out）用同一套流程</b>，只是时间更短、实例更少。</td><td>这样候选程序在树内拿到的分数，衡量的就是最终评测会衡量的东西：同样的重新编译、同样的隔离、同样的 checker。</td></tr>
+    </tbody>
+  </table></div>
+  <p>在这些规则之上，网络文件系统的两个特性，让每一次启动都会打到文件服务器上：</p>
+  <ul>
+    <li><b>每次打开文件都要和服务器确认。</b>NFS 保证“打开-关闭一致性”：进程打开一个文件时，要先问服务器文件有没有变，即使内容已经缓存在本机内存里。</li>
+    <li><b>找不到的文件也要走一次网络。</b>编译器为每个头文件依次尝试好几个 include 目录；shell 执行每条命令前都要在 <code>PATH</code> 的每个目录里找一遍（包括 <code>/home</code> 下的目录）；Python 和编译器会把 <code>/home</code>、<code>/home/…</code> 逐级解析。每一次没找到，都是一次对服务器的请求。</li>
+  </ul>
+  <p>此外，作业很短、内存上限又紧，一个作业读进内存的文件页，很容易在同一节点上的下一个作业用到之前就被回收（可能如此，尚未实测）。</p>
+  <p class="small">在老集群上用 <code>strace</code> 跟踪了一次真实的树内测评（cluster editing，1 个实例，3.8 秒）：对网络盘约 8,000 次文件操作，其中约 1,000 次是查找不存在的文件；打开 277 个文件；读约 110 MB——Python 30 MB、C++ 编译器 <code>cc1plus</code> 39 MB、汇编器、链接器和共享库 30 MB、头文件 4 MB。实例本身只有几 KB。</p>
+</section>
+
+<section>
+  <h2>4. 为什么每次测评都开一个新作业</h2>
   <p>一个直接的替代方案是：每一轮（或每棵树）分配一个大节点，所有测评都在上面跑。我们没有这样做，原因有两个：</p>
   <ul>
     <li><b>排队浪费时间。</b>测评的负载是突发的：一次架构变更之后，十个会话会同时提交测评，每次 promote 检查是 30 个实例、每个最多一分钟。固定在一个节点上，这些突发的测评就会互相排队，而树在等测评结果的时候是暂停的。分成单独的作业，就能分散到整个集群所有空闲的核上，一波突发测评大约只要一次测评的时间就跑完。</li>
     <li><b>排队让数据不准。</b>求解程序的分数取决于在限定时间内能做多少计算。如果测评挤在一个超额分配的节点上，就会抢核、抢内存带宽、抢缓存，同一个程序的分数会随着旁边跑着什么而变化。官方评测给每个实例一个绑定的核和独立的内存上限；每个实例一个作业（或作业步）正好复现这一点，树内的分数才能和最终隐藏集分数、以及彼此之间相互比较。</li>
   </ul>
-  <p>代价就是第 2 节的冷启动：每个作业都要重新加载同一套工具链和数据。文件来自离计算节点很近的存储服务器时，这没有问题；来自登录节点时，就出问题了。</p>
+  <p>代价就是第 2、3 节说的冷启动：每个作业都要重新加载同一套工具链和数据。文件来自离计算节点很近的存储服务器时，这没有问题；来自登录节点时，就出问题了。</p>
   <p class="small">新集群的计算节点不能提交作业，所以在那里，一棵树的测评是在这棵树的多节点分配里用 Slurm 作业步来跑的（每个实例一个作业步，绑核和限制都一样），最终评测则从登录节点以 Slurm 数组提交。两种方式都同样是冷启动。</p>
 </section>
 
 <section>
-  <h2>4. 两台机器的区别</h2>
+  <h2>5. 两台机器的区别</h2>
   <div class="tbl"><table>
     <thead><tr><th></th><th>老集群</th><th>新集群（Brev，GCP）</th></tr></thead>
     <tbody>
@@ -236,7 +277,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>5. 为什么会出这个问题</h2>
+  <h2>6. 为什么会出这个问题</h2>
   <p>这套脚本是在老集群上写的，那里的 <code>/home</code> 是真正的文件服务器；搬到新集群时没有改动。可在新集群上，同一个路径属于登录节点，那只是一台普通的虚拟机，它的磁盘和网卡突然要给 19 个节点上的每一次测评供应编译器、运行时和实例。云服务商报告：<b>11 月 26 日 15:39 UTC（北京时间 23:39）前后，10 分钟内发出了约 800 万个数据包</b>。这正是我们好几件事被安排在同一时刻启动的时候。</p>
   <h3>告警前的 20 分钟</h3>
   <div class="tbl"><table>
@@ -244,30 +285,29 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
     <tbody>
       <tr><td class="num">15:19</td><td>第 1、2 次 LOT-I 运行的 10 棵树同时到了 12 小时的截止时间（前后相差几分钟）</td><td>—</td></tr>
       <tr><td class="num">紧接着</td><td>10 个评测脚本<b>同时提交最终的隐藏集评测</b>：每个实例一个作业，每次运行约 400 个实例，每道题最多 30 个并行——<b>同一时刻最多约 300 个作业冷启动</b></td><td>每个作业：Python、完整重新编译（编译器加几百个头文件）、实例；hitting set / dominating set 每个实例还要启动一次 Java 虚拟机</td></tr>
-      <tr><td class="num">约 15:20</td><td>两个分配释放了 768 个核，<b>排队中的 13 个单会话同时启动</b></td><td>每个会话：复制一份智能体命令行程序（约 200 MB）和 checker 目录，然后模型开始编译</td></tr>
-      <tr><td class="num">约 15:25–15:30</td><td>每 5 分钟轮询一次的监控脚本发现两个分配都结束了，<b>启动第 3 次运行：又是 5 棵树</b>，每棵树起约 10 个会话和第一轮测评</td><td>每棵树：智能体命令行程序和工具链的拷贝；之后是和上面一样的冷启动</td></tr>
+      <tr><td class="num">约 15:20</td><td>两个分配释放了 768 个核，<b>排队中的 13 个单会话同时启动</b></td><td>每个会话：复制一份 checker 目录，然后模型开始编译、跑自测</td></tr>
+      <tr><td class="num">约 15:25–15:30</td><td>每 5 分钟轮询一次的监控脚本发现两个分配都结束了，<b>启动第 3 次运行：又是 5 棵树</b>，每棵树起约 10 个会话和第一轮测评</td><td>每棵树：复制一份 checker 目录；之后是和上面一样的冷启动</td></tr>
     </tbody>
   </table></div>
   <p class="small">这个时间线是根据树的截止时间和启动脚本推出来的；之后集群就连不上了，所以还没有用集群日志逐条核对。</p>
   <h3>为什么是包多，而不只是字节多</h3>
-  <p>10 分钟 800 万个包，大约每秒 1.3 万个。NFS 不只是传文件内容：进程每打开一个文件，都要先查路径、查属性，每次都是一来一回的小包。一次 C++ 编译要打开几百个头文件；几百个编译同时开始，就在大块读取（智能体程序、编译器、JDK、实例）之外，又叠加了海量的小元数据包。</p>
+  <p>10 分钟 800 万个包，大约每秒 1.3 万个。NFS 不只是传文件内容：进程每打开一个文件，都要先查路径、查属性，每次都是一来一回的小包。一次 C++ 编译要打开几百个头文件；几百个编译同时开始，就在大块读取（Python、编译器、JDK、实例）之外，又叠加了海量的小元数据包。</p>
   <p>所以告警的不是实验平稳运行时的负载，而是<b>我们自己安排出来的一次突发</b>：十棵树的最终评测、13 个会话、5 棵新树，都被同一个事件——第 1、2 次运行结束——同时触发了。</p>
   <p>测评本身并不需要这些流量：被读的东西在整个实验期间一个字节都不会变。</p>
 </section>
 
 <section>
-  <h2>6. 我们怎么改</h2>
+  <h2>7. 我们怎么改</h2>
   <ol>
     <li><b>每个节点只读一次。</b>作业第一次落到某个计算节点时，把工具链和本次实验用到的题目实例复制到该节点的本地盘（加锁，只复制一次）；之后的测评、编译和会话都读本地。</li>
     <li><b>不再从登录节点读。</b>主副本搬到共享数据存储；登录节点上的 <code>/home</code> 只留给人用。</li>
     <li><b>先测量再放量。</b>恢复完整实验之前，先跑一棵树一小时，读计算节点上每个挂载点的字节计数（<code>/proc/self/mountstats</code>）。</li>
     <li><b>让登录节点安静下来。</b>用一个每隔几分钟轮询一次的监控脚本，代替几十个每分钟轮询的脚本。</li>
     <li><b>错开启动。</b>最终评测、新会话和下一次运行不再由同一个事件同时触发：评测分小批放出，会话和树每次只启动几个，中间留出间隔。</li>
-    <li><b>不再每个会话都从 home 复制。</b>智能体命令行程序和工具链只在共享存储或节点本地盘上放一份，不再由每个会话、每棵树从 <code>/home</code> 复制。</li>
   </ol>
 </section>
 
-<footer>本页更新于 2026-11-27（补充了告警时间线；老/新 Brev 集群）。文件大小是在老集群上的副本上实测的；每次测评的流量和页缓存的效果在第 3 步实测之前都是估计值。</footer>
+<footer>本页更新于 2026-11-27（补充了告警时间线；老/新 Brev 集群；为什么重复读取及实测）。文件大小是在老集群上的副本上实测的；每次测评的流量和页缓存的效果在第 7 节第 3 步实测之前都是估计值。</footer>
 </div>
 </main>
 <script>
