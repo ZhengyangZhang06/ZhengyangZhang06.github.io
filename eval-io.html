@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>*{box-sizing:border-box}body{margin:0}</style>
+<title>What an evaluation reads · 每次测评读什么</title>
+<meta name="description" content="What every solver evaluation of the LOT-I / TCSExam runs reads from shared storage, why each evaluation is its own Slurm job, and why the same scripts caused a network-traffic alert on a cloud cluster but not on our lab cluster.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1b1f27; --ink2:#4a5160; --muted:#7b8292; --line:#dde1e8;
+  --acc:#3d55c4; --acc-soft:#e8ecfb; --ok:#1f7a3a; --ok-soft:#e3f3e8; --warn:#a2610c; --warn-soft:#fbf0de;
+  --bad:#b3261e; --bad-soft:#fbe9e7;
+  --sans:"IBM Plex Sans","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d;
+  --acc:#8399f2; --acc-soft:#222a45; --ok:#5cc47a; --ok-soft:#18301f; --warn:#e0a24a; --warn-soft:#33281a;
+  --bad:#f08a80; --bad-soft:#3a1f1d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13161b; --panel:#1b1f26; --ink:#e7e9ee; --ink2:#b3b8c3; --muted:#868d9b; --line:#2d333d;
+  --acc:#8399f2; --acc-soft:#222a45; --ok:#5cc47a; --ok-soft:#18301f; --warn:#e0a24a; --warn-soft:#33281a;
+  --bad:#f08a80; --bad-soft:#3a1f1d; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15.5px/1.75 var(--sans)}
+.wrap{max-width:900px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:48px}
+h1{font-size:29px;line-height:1.3;margin:0;font-weight:600;text-wrap:balance}
+h2{font-size:20px;margin:0;font-weight:600}
+h3{font-size:15.5px;margin:0;font-weight:600}
+p{margin:0;max-width:72ch}
+ul,ol{margin:0;padding-left:22px;max-width:72ch}
+li+li{margin-top:4px}
+a{color:var(--acc)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+header{display:flex;flex-direction:column;gap:12px}
+header .lede{color:var(--ink2);font-size:16.5px}
+section{display:flex;flex-direction:column;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.callout{padding:16px 18px;border-left:4px solid var(--acc);background:var(--acc-soft);border-radius:6px;max-width:78ch}
+.callout.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--ink2);font-size:13px}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.flow{font:12.5px/1.7 var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;overflow-x:auto;white-space:pre;margin:0}
+.small{font-size:13.5px;color:var(--ink2)}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+.lang-body{display:flex;flex-direction:column;gap:48px}
+html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body[lang="zh"]{display:none!important}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.crumbs{font:13px var(--mono);color:var(--muted)}
+.crumbs a{color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:500 12px var(--mono);background:var(--panel);color:var(--ink2);border:0;padding:5px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--acc);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two .panel{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.two .panel h3{font-size:14.5px}
+@media (max-width:720px){.two{grid-template-columns:1fr}h1{font-size:24px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<div class="bar" id="top"><span class="crumbs"><a href="index.html">← Home</a></span><span class="seg" role="group" aria-label="Language"><button data-l="en">EN</button><button data-l="zh">中文</button></span></div>
+
+<!-- ============================ ENGLISH ============================ -->
+<div class="lang-body" lang="en">
+<header>
+  <span class="eyebrow">LOT-I · TCSExam solver runs · infrastructure note · November 2026</span>
+  <h1>What every evaluation reads, and why one cluster complained</h1>
+  <p class="lede">Our LOT-I runs judge candidate solvers thousands of times per tree, each time in a fresh Slurm job. On our lab cluster this is harmless. On a cloud cluster the same scripts made the login node's disk serve so much network traffic that the cloud provider flagged the whole cluster. This page lists what each evaluation reads, why it is a separate job, and what differs between the two machines.</p>
+</header>
+
+<section>
+  <div class="callout warn"><p><b>Short version.</b> Every evaluation starts cold: it copies the submission, rebuilds it from source with the C++ compiler, starts Python (and for some tasks a Java VM) and reads its instances. All of that lived under <code>/home</code>. On the lab cluster <code>/home</code> is served by a dedicated storage server; on the cloud cluster it sits on the login node's own disk, so every compute node read the toolchain and the data <i>through the login node</i>, tens of thousands of times.</p></div>
+</section>
+
+<section>
+  <h2>1. What one evaluation does</h2>
+  <p>An evaluation scores one candidate solver on a few instances (inside a tree) or on the whole hidden set (final judging). It reproduces the official TCSExam judge without Docker:</p>
+  <pre class="flow">new Slurm job (or job step), 1 pinned core per instance, its own memory limit
+ ├─ private root: user + mount + network namespace, /app = a fresh copy of the submission
+ ├─ start the judge          python3.12  judge_native.py
+ ├─ rebuild the submission   bash /app/build.sh   → g++ (compiler, headers, libstdc++, binutils)
+ ├─ run the solver           solver INSTANCE OUTPUT LIMIT   (reads the instance file)
+ └─ verify + score           task checker (Python; a Java VM for hs/ds; cvc5 for sygus; drat-trim for qbf)</pre>
+  <p>Nothing of this is kept between evaluations: the next one starts from scratch.</p>
+</section>
+
+<section>
+  <h2>2. What it reads, every time</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>What</th><th>Where</th><th>Size</th><th>Why every time</th></tr></thead>
+    <tbody>
+      <tr><td>Python interpreter + standard library</td><td><code>solver-env/py312</code></td><td class="num">71 MB (reads ~10–20 MB)</td><td>runs the judge script; one start per job</td></tr>
+      <tr><td>C++ compiler</td><td><code>solver-env/gcc12</code> (gcc11 for job-shop)</td><td class="num">531 MB; one build ≈ 100 MB (<code>cc1plus</code> alone 39 MB)</td><td>the judge rebuilds the submission from source, exactly as the official judge does</td></tr>
+      <tr><td>Instances</td><td><code>solver-data/&lt;task&gt;/{public,hidden}</code></td><td class="num">tens of MB to 2 GB per task; one instance KB to 65 MB</td><td>each evaluation reads the instances it runs</td></tr>
+      <tr><td>Verifier runtimes</td><td><code>solver-env/jdk21</code>, <code>cvc5</code>, qbf tools</td><td class="num">JDK 547 MB (≈100+ MB per VM start); cvc5 32 MB</td><td>hitting set / dominating set start one Java VM <i>per instance</i>; sygus copies cvc5 per job</td></tr>
+      <tr><td>Scorer and runner scripts</td><td><code>src/assets/…/judge</code></td><td class="num">KB</td><td>copied into the private root per job (negligible)</td></tr>
+    </tbody>
+  </table></div>
+  <p>Agent sessions read the same toolchain whenever the model compiles or runs a public self-test, for 12 hours per session. Sizes are from our lab copy; the cloud copy holds 20 more tasks and is larger.</p>
+  <p class="small">Scale: one five-task batch on the lab cluster (three repetitions, 15 trees of 12 hours) ran about 340,000 evaluation jobs (Slurm array tasks). Without cache hits, 100–300 MB per job would be terabytes. How much the compute nodes' page cache absorbs we have not measured yet; with short jobs under tight memory limits, cached pages are easily reclaimed between jobs.</p>
+</section>
+
+<section>
+  <h2>3. Why every evaluation is a new job</h2>
+  <p>The obvious alternative is to give each round (or each tree) one big node and run all its evaluations there. We do not, for two reasons:</p>
+  <ul>
+    <li><b>Queuing wastes time.</b> Evaluation load is bursty: after an architecture change ten sessions submit at once, each promote check is 30 instances × up to a minute. On one fixed node those bursts queue behind each other, and a tree pauses while its gate waits for a result. Separate jobs spread over every free core in the cluster, so a burst finishes in about the time of one evaluation.</li>
+    <li><b>Queuing makes the data wrong.</b> Solver scores depend on how much work fits into a wall-clock limit. If evaluations share an oversubscribed node, they compete for cores, memory bandwidth and caches, and the same solver scores differently depending on what else is running. The official judge gives every instance one pinned core with its own memory limit; one job (or job step) per instance reproduces exactly that, so in-tree scores are comparable to the final hidden score and to each other.</li>
+  </ul>
+  <p>The price is the cold start of section 2: every job reloads the same toolchain and data. That is fine when the files come from a storage server close to the compute nodes, and not fine when they come from a login node.</p>
+  <p class="small">On the cloud cluster compute nodes cannot submit jobs, so there the evaluations of a tree run as Slurm job steps inside the tree's multi-node allocation (one step per instance, same pinning and limits), and final judging runs as Slurm arrays from the login node. Both start cold in the same way.</p>
+</section>
+
+<section>
+  <h2>4. The two machines</h2>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Lab cluster</th><th>Cloud cluster (GCP)</th></tr></thead>
+    <tbody>
+      <tr><td>Who serves <code>/home</code></td><td>a dedicated NFS storage server (separate machine, tuned for parallel reads)</td><td><b>the login node's own root disk</b>, exported to the compute nodes</td></tr>
+      <tr><td>Shared data store</td><td>same storage server</td><td>a separate shared file system — but our toolchain and data were not on it</td></tr>
+      <tr><td>Where the toolchain and data lived</td><td><code>/home/…/tcsexam</code> → storage server</td><td><code>/home/…/tcsexam</code> → login node</td></tr>
+      <tr><td>Compute nodes</td><td>4</td><td>19 (group quota 960 CPUs)</td></tr>
+      <tr><td>Concurrency in our runs</td><td>5–10 trees at a time</td><td>10–15 trees + 15 single-session agents + final judging at the same time</td></tr>
+      <tr><td>Traffic path of one evaluation</td><td>compute node → storage server</td><td>compute node → <b>login node</b></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>5. Why it happened</h2>
+  <p>The scripts were written on the lab cluster, where <code>/home</code> is a real file server, and moved unchanged to the cloud cluster. There the same path belongs to the login node: an ordinary VM whose disk and network card suddenly served compilers, runtimes and instances to every evaluation on 19 nodes. The peak was around 15:20 UTC on 26 November, when a third LOT-I repetition, 15 paper-style single sessions and the final judging of ten trees started within minutes of each other. That much traffic from one VM is what the provider's monitoring flagged.</p>
+  <p>Nothing in the evaluations themselves needs that traffic: everything read is identical for the whole experiment.</p>
+</section>
+
+<section>
+  <h2>6. What we change</h2>
+  <ol>
+    <li><b>Read once per node.</b> Stage the toolchain and the instances of the tasks in use onto each compute node's local disk the first time a job lands there (with a lock so it happens once); evaluations, builds and sessions then read locally.</li>
+    <li><b>Never from the login node.</b> The master copy moves to the shared data store; <code>/home</code> on a login node is only for the user.</li>
+    <li><b>Measure before scaling up.</b> Run one tree for an hour and read the per-mount byte counters on the compute nodes (<code>/proc/self/mountstats</code>) before restarting the full experiments.</li>
+    <li><b>Quieter login node.</b> One watcher polling every few minutes instead of dozens polling every minute.</li>
+  </ol>
+</section>
+
+<footer>Updated 2026-11-27. Sizes are measured on the lab copy; the traffic volume per evaluation and the page-cache effect are estimates until the measurement in step 3.</footer>
+</div>
+
+<!-- ============================ 中文 ============================ -->
+<div class="lang-body" lang="zh">
+<header>
+  <span class="eyebrow">LOT-I · TCSExam 求解题实验 · 基础设施说明 · 2026 年 11 月</span>
+  <h1>每次测评读了什么，以及为什么一个集群被告警</h1>
+  <p class="lede">LOT-I 的每棵树要对候选程序做成千上万次测评，每次都在一个新的 Slurm 作业里进行。在实验室集群上这没有问题；同样的脚本放到云上的集群，却让登录节点的磁盘产生了大量网络流量，整个集群被云服务商告警。本页说明每次测评读了什么、为什么每次测评单独开一个作业，以及两台机器的区别。</p>
+</header>
+
+<section>
+  <div class="callout warn"><p><b>简短版。</b>每次测评都是冷启动：复制一份提交的代码，用 C++ 编译器从源码重新编译，启动 Python（有的题还要启动 Java 虚拟机），再读实例。这些东西都放在 <code>/home</code> 下。实验室集群的 <code>/home</code> 由一台专门的存储服务器提供；云集群的 <code>/home</code> 却在登录节点自己的磁盘上，于是每个计算节点都<i>经由登录节点</i>读编译器和数据，读了几万次。</p></div>
+</section>
+
+<section>
+  <h2>1. 一次测评做了什么</h2>
+  <p>一次测评给一个候选程序打分：树内测评跑几个实例，最终评测跑整个隐藏集。它在不用 Docker 的情况下复现 TCSExam 官方评测：</p>
+  <pre class="flow">新的 Slurm 作业（或作业步），每个实例独占 1 个绑定的核，有自己的内存上限
+ ├─ 私有根目录：user + mount + network 命名空间，/app = 提交代码的一份新拷贝
+ ├─ 启动评测脚本   python3.12  judge_native.py
+ ├─ 重新编译       bash /app/build.sh   → g++（编译器、头文件、libstdc++、binutils）
+ ├─ 运行程序       solver INSTANCE OUTPUT LIMIT（读实例文件）
+ └─ 验证并打分     题目自带的 checker（Python；hs/ds 用 Java 虚拟机；sygus 用 cvc5；qbf 用 drat-trim）</pre>
+  <p>两次测评之间什么都不保留，下一次又从头开始。</p>
+</section>
+
+<section>
+  <h2>2. 每次都要读的东西</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>内容</th><th>位置</th><th>大小</th><th>为什么每次都读</th></tr></thead>
+    <tbody>
+      <tr><td>Python 解释器和标准库</td><td><code>solver-env/py312</code></td><td class="num">71 MB（实际读约 10–20 MB）</td><td>评测脚本由它运行，每个作业启动一次</td></tr>
+      <tr><td>C++ 编译器</td><td><code>solver-env/gcc12</code>（job-shop 用 gcc11）</td><td class="num">531 MB；一次编译约 100 MB（<code>cc1plus</code> 本身 39 MB）</td><td>评测会像官方评测一样，把提交的代码从源码重新编译</td></tr>
+      <tr><td>实例</td><td><code>solver-data/&lt;题&gt;/{public,hidden}</code></td><td class="num">每道题几十 MB 到 2 GB；单个实例从 KB 到 65 MB</td><td>每次测评读它要跑的实例</td></tr>
+      <tr><td>验证器运行时</td><td><code>solver-env/jdk21</code>、<code>cvc5</code>、qbf 工具</td><td class="num">JDK 547 MB（每启动一次虚拟机读一百多 MB）；cvc5 32 MB</td><td>hitting set / dominating set <i>每个实例</i>启动一次 Java 虚拟机；sygus 每个作业复制一份 cvc5</td></tr>
+      <tr><td>评分和 runner 脚本</td><td><code>src/assets/…/judge</code></td><td class="num">KB 级</td><td>每个作业复制进私有根目录（可以忽略）</td></tr>
+    </tbody>
+  </table></div>
+  <p>智能体会话里，模型每次编译或跑公开自测，也会读同一套工具链，每个会话持续 12 小时。表中大小来自实验室的那份副本；云上的副本多了 20 道题，会更大。</p>
+  <p class="small">规模：实验室集群上一批 5 道题（跑 3 次，共 15 棵 12 小时的树）大约跑了 34 万个测评作业（Slurm 数组任务）。如果没有缓存命中，每个作业读 100–300 MB，总量就是 TB 级。计算节点的页缓存能挡住多少，我们还没有实测；作业很短、内存上限又紧，作业之间缓存的页很容易被回收。</p>
+</section>
+
+<section>
+  <h2>3. 为什么每次测评都开一个新作业</h2>
+  <p>一个直接的替代方案是：每一轮（或每棵树）分配一个大节点，所有测评都在上面跑。我们没有这样做，原因有两个：</p>
+  <ul>
+    <li><b>排队浪费时间。</b>测评的负载是突发的：一次架构变更之后，十个会话会同时提交测评，每次 promote 检查是 30 个实例、每个最多一分钟。固定在一个节点上，这些突发的测评就会互相排队，而树在等测评结果的时候是暂停的。分成单独的作业，就能分散到整个集群所有空闲的核上，一波突发测评大约只要一次测评的时间就跑完。</li>
+    <li><b>排队让数据不准。</b>求解程序的分数取决于在限定时间内能做多少计算。如果测评挤在一个超额分配的节点上，就会抢核、抢内存带宽、抢缓存，同一个程序的分数会随着旁边跑着什么而变化。官方评测给每个实例一个绑定的核和独立的内存上限；每个实例一个作业（或作业步）正好复现这一点，树内的分数才能和最终隐藏集分数、以及彼此之间相互比较。</li>
+  </ul>
+  <p>代价就是第 2 节的冷启动：每个作业都要重新加载同一套工具链和数据。文件来自离计算节点很近的存储服务器时，这没有问题；来自登录节点时，就出问题了。</p>
+  <p class="small">云集群的计算节点不能提交作业，所以在那里，一棵树的测评是在这棵树的多节点分配里用 Slurm 作业步来跑的（每个实例一个作业步，绑核和限制都一样），最终评测则从登录节点以 Slurm 数组提交。两种方式都同样是冷启动。</p>
+</section>
+
+<section>
+  <h2>4. 两台机器的区别</h2>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>实验室集群</th><th>云集群（GCP）</th></tr></thead>
+    <tbody>
+      <tr><td>谁提供 <code>/home</code></td><td>一台专门的 NFS 存储服务器（独立的机器，为并行读写调过参数）</td><td><b>登录节点自己的系统盘</b>，共享给计算节点</td></tr>
+      <tr><td>共享数据存储</td><td>同一台存储服务器</td><td>有一套独立的共享文件系统，但我们的工具链和数据没放在上面</td></tr>
+      <tr><td>工具链和数据放在哪</td><td><code>/home/…/tcsexam</code> → 存储服务器</td><td><code>/home/…/tcsexam</code> → 登录节点</td></tr>
+      <tr><td>计算节点数</td><td>4</td><td>19（组配额 960 核）</td></tr>
+      <tr><td>我们的并发量</td><td>同时 5–10 棵树</td><td>10–15 棵树 + 15 个单会话智能体 + 最终评测，同时进行</td></tr>
+      <tr><td>一次测评的流量路径</td><td>计算节点 → 存储服务器</td><td>计算节点 → <b>登录节点</b></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>5. 为什么会出这个问题</h2>
+  <p>这套脚本是在实验室集群上写的，那里的 <code>/home</code> 是真正的文件服务器；搬到云集群时没有改动。可在云集群上，同一个路径属于登录节点，那只是一台普通的虚拟机，它的磁盘和网卡突然要给 19 个节点上的每一次测评供应编译器、运行时和实例。峰值出现在 11 月 26 日 15:20 UTC 前后：第三次 LOT-I 运行、15 个和论文设置一样的单会话、以及十棵树的最终评测，在几分钟之内同时开始。一台虚拟机发出这么大的流量，就被云服务商的监控标了出来。</p>
+  <p>测评本身并不需要这些流量：被读的东西在整个实验期间一个字节都不会变。</p>
+</section>
+
+<section>
+  <h2>6. 我们怎么改</h2>
+  <ol>
+    <li><b>每个节点只读一次。</b>作业第一次落到某个计算节点时，把工具链和本次实验用到的题目实例复制到该节点的本地盘（加锁，只复制一次）；之后的测评、编译和会话都读本地。</li>
+    <li><b>不再从登录节点读。</b>主副本搬到共享数据存储；登录节点上的 <code>/home</code> 只留给人用。</li>
+    <li><b>先测量再放量。</b>恢复完整实验之前，先跑一棵树一小时，读计算节点上每个挂载点的字节计数（<code>/proc/self/mountstats</code>）。</li>
+    <li><b>让登录节点安静下来。</b>用一个每隔几分钟轮询一次的监控脚本，代替几十个每分钟轮询的脚本。</li>
+  </ol>
+</section>
+
+<footer>本页更新于 2026-11-27。文件大小是在实验室副本上实测的；每次测评的流量和页缓存的效果在第 3 步实测之前都是估计值。</footer>
+</div>
+</main>
+<script>
+(function(){
+  var d=document.documentElement, pick;
+  try{pick=localStorage.getItem('evalio-lang')}catch(e){}
+  if(pick!=='zh'&&pick!=='en'){pick=(navigator.language||'').toLowerCase().indexOf('zh')===0?'zh':'en'}
+  function set(l){d.setAttribute('data-lang',l);d.setAttribute('lang',l==='zh'?'zh':'en');
+    document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.l===l?'true':'false')});
+    try{localStorage.setItem('evalio-lang',l)}catch(e){}}
+  document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){set(b.dataset.l)})});
+  set(pick);
+})();
+</script>
+</body>
+</html>
