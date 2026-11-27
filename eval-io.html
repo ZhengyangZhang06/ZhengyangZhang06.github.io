@@ -56,6 +56,10 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .seg button{font:500 12px var(--mono);background:var(--panel);color:var(--ink2);border:0;padding:5px 10px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--acc);color:#fff}
+.part-head{border-top:2px solid var(--ink);padding-top:28px;gap:10px}
+.part-head h2{font-size:23px}
+.part-head .lede{color:var(--ink2);font-size:16px;max-width:72ch}
+section>h3:first-child{font-size:17.5px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .two .panel{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
 .two .panel h3{font-size:14.5px}
@@ -78,8 +82,14 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
   <div class="callout warn"><p><b>Short version.</b> Every evaluation starts cold: it copies the submission, rebuilds it from source with the C++ compiler, starts Python (and for some tasks a Java VM) and reads its instances. All of that lived under <code>/home</code>. On the old cluster <code>/home</code> is served by a dedicated storage server; on the new cluster it sits on the login node's own disk, so every compute node read the toolchain and the data <i>through the login node</i>, tens of thousands of times.</p></div>
 </section>
 
+<section class="part-head">
+  <span class="eyebrow">Part 1</span>
+  <h2>What a TCSExam evaluation reads</h2>
+  <p class="lede">What one evaluation of a candidate solver does, which files it reads, and why it reads them again every time, following the judging rules of the TCSExam paper.</p>
+</section>
+
 <section>
-  <h2>1. What one evaluation does</h2>
+  <h3>1.1 What one evaluation does</h3>
   <p>An evaluation scores one candidate solver on a few instances (inside a tree) or on the whole hidden set (final judging). It reproduces the official TCSExam judge without Docker:</p>
   <pre class="flow">new Slurm job (or job step), 1 pinned core per instance, its own memory limit
  ├─ private root: user + mount + network namespace, /app = a fresh copy of the submission
@@ -91,7 +101,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>2. What it reads, every time</h2>
+  <h3>1.2 What it reads, every time</h3>
   <div class="tbl"><table>
     <thead><tr><th>What</th><th>Where</th><th>Size</th><th>Why every time</th></tr></thead>
     <tbody>
@@ -107,7 +117,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>3. Why the same files are read again on every evaluation</h2>
+  <h3>1.3 Why the same files are read again on every evaluation</h3>
   <p>Our evaluation reproduces the paper's final solver judging (TCSExam, Appendix D.2 and the task instructions) as closely as we can without Docker. Each of its rules turns into reads that repeat:</p>
   <div class="tbl"><table>
     <thead><tr><th>What repeats</th><th>The rule in the paper's judging it comes from</th></tr></thead>
@@ -128,18 +138,24 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>4. Why every evaluation is a new job</h2>
+  <h3>1.4 Why every evaluation is a new job</h3>
   <p>The obvious alternative is to give each round (or each tree) one big node and run all its evaluations there. We do not, for two reasons:</p>
   <ul>
     <li><b>Queuing wastes time.</b> Evaluation load is bursty: after an architecture change ten sessions submit at once, each promote check is 30 instances × up to a minute. On one fixed node those bursts queue behind each other, and a tree pauses while its gate waits for a result. Separate jobs spread over every free core in the cluster, so a burst finishes in about the time of one evaluation.</li>
     <li><b>Queuing makes the data wrong.</b> Solver scores depend on how much work fits into a wall-clock limit. If evaluations share an oversubscribed node, they compete for cores, memory bandwidth and caches, and the same solver scores differently depending on what else is running. The official judge gives every instance one pinned core with its own memory limit; one job (or job step) per instance reproduces exactly that, so in-tree scores are comparable to the final hidden score and to each other.</li>
   </ul>
-  <p>The price is the cold start of sections 2 and 3: every job reloads the same toolchain and data. That is fine when the files come from a storage server close to the compute nodes, and not fine when they come from a login node.</p>
+  <p>The price is the cold start of 1.2 and 1.3: every job reloads the same toolchain and data. That is fine when the files come from a storage server close to the compute nodes, and not fine when they come from a login node.</p>
   <p class="small">On the new cluster compute nodes cannot submit jobs, so there the evaluations of a tree run as Slurm job steps inside the tree's multi-node allocation (one step per instance, same pinning and limits), and final judging runs as Slurm arrays from the login node. Both start cold in the same way.</p>
 </section>
 
+<section class="part-head">
+  <span class="eyebrow">Part 2</span>
+  <h2>What happened in those 10 minutes</h2>
+  <p class="lede">Around 15:39 UTC on 26 November (23:39 Beijing time) the new cluster sent about 8 million packets within 10 minutes. How the two clusters differ, what started at that moment, and what we change.</p>
+</section>
+
 <section>
-  <h2>5. The two machines</h2>
+  <h3>2.1 The two machines</h3>
   <div class="tbl"><table>
     <thead><tr><th></th><th>Old cluster (Brev)</th><th>New cluster (Brev, GCP)</th></tr></thead>
     <tbody>
@@ -155,9 +171,8 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>6. Why it happened</h2>
+  <h3>2.2 The 20 minutes before the alert</h3>
   <p>The scripts were written on the old cluster, where <code>/home</code> comes from a real file server, and moved unchanged to the new cluster. There the same path belongs to the login node: an ordinary VM whose disk and network card suddenly served compilers, runtimes and instances to every evaluation on 19 nodes. The provider reported about <b>8 million packets within 10 minutes around 15:39 UTC on 26 November</b> (23:39 Beijing time). That is exactly when several of our things were scheduled to start at the same moment.</p>
-  <h3>The 20 minutes before the alert</h3>
   <div class="tbl"><table>
     <thead><tr><th>Time (UTC)</th><th>What started</th><th>What it read from the login node</th></tr></thead>
     <tbody>
@@ -168,14 +183,16 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
     </tbody>
   </table></div>
   <p class="small">Reconstructed from the trees' deadlines and the launch scripts; the cluster was unreachable afterwards, so the times are not yet checked against its logs.</p>
-  <h3>Why so many packets, not just bytes</h3>
-  <p>8 million packets in 10 minutes is about 13,000 per second. NFS does not only move file contents: every file a process opens is first looked up and its attributes checked, each a small request and reply. One C++ build opens a few hundred header files; a few hundred builds starting together turn into a flood of small metadata packets on top of the bulk reads (Python, compiler, JDK, instances).</p>
-  <p>So the alert was not the steady load of a running experiment but a <b>burst we scheduled ourselves</b>: final judging of ten trees, 13 sessions and five new trees were all triggered by the same event, the end of repetitions 1 and 2.</p>
-  <p>Nothing in the evaluations themselves needs that traffic: everything read is identical for the whole experiment.</p>
 </section>
 
 <section>
-  <h2>7. What we change</h2>
+  <h3>2.3 Why so many packets, not just bytes</h3>
+  <p>8 million packets in 10 minutes is about 13,000 per second. NFS does not only move file contents: every file a process opens is first looked up and its attributes checked, each a small request and reply. One C++ build opens a few hundred header files; a few hundred builds starting together turn into a flood of small metadata packets on top of the bulk reads (Python, compiler, JDK, instances).</p>
+  <p>So the alert was not the steady load of a running experiment but a <b>burst we scheduled ourselves</b>: final judging of ten trees, 13 sessions and five new trees were all triggered by the same event, the end of repetitions 1 and 2.</p>
+</section>
+
+<section>
+  <h3>2.4 What we change</h3>
   <ol>
     <li><b>Read once per node.</b> Stage the toolchain and the instances of the tasks in use onto each compute node's local disk the first time a job lands there (with a lock so it happens once); evaluations, builds and sessions then read locally.</li>
     <li><b>Never from the login node.</b> The master copy moves to the shared data store; <code>/home</code> on a login node is only for the user.</li>
@@ -185,7 +202,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
   </ol>
 </section>
 
-<footer>Updated 2026-11-27 (timeline of the alert; old vs new Brev cluster; why reads repeat, measured). Sizes are measured on the old cluster's copy; the traffic volume per evaluation and the page-cache effect are estimates until the measurement in section 7, step 3.</footer>
+<footer>Updated 2026-11-27 (timeline of the alert; old vs new Brev cluster; why reads repeat, measured). Sizes are measured on the old cluster's copy; the traffic volume per evaluation and the page-cache effect are estimates until the measurement in 2.4, step 3.</footer>
 </div>
 
 <!-- ============================ 中文 ============================ -->
@@ -200,8 +217,14 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
   <div class="callout warn"><p><b>简短版。</b>每次测评都是冷启动：复制一份提交的代码，用 C++ 编译器从源码重新编译，启动 Python（有的题还要启动 Java 虚拟机），再读实例。这些东西都放在 <code>/home</code> 下。老集群的 <code>/home</code> 由一台专门的存储服务器提供；新集群的 <code>/home</code> 却在登录节点自己的磁盘上，于是每个计算节点都<i>经由登录节点</i>读编译器和数据，读了几万次。</p></div>
 </section>
 
+<section class="part-head">
+  <span class="eyebrow">第一部分</span>
+  <h2>TCSExam 测评要读什么</h2>
+  <p class="lede">一次候选程序的测评做了什么、读了哪些文件，以及按照 TCSExam 论文的评测规则，为什么每次都要重新读一遍。</p>
+</section>
+
 <section>
-  <h2>1. 一次测评做了什么</h2>
+  <h3>1.1 一次测评做了什么</h3>
   <p>一次测评给一个候选程序打分：树内测评跑几个实例，最终评测跑整个隐藏集。它在不用 Docker 的情况下复现 TCSExam 官方评测：</p>
   <pre class="flow">新的 Slurm 作业（或作业步），每个实例独占 1 个绑定的核，有自己的内存上限
  ├─ 私有根目录：user + mount + network 命名空间，/app = 提交代码的一份新拷贝
@@ -213,7 +236,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>2. 每次都要读的东西</h2>
+  <h3>1.2 每次都要读的东西</h3>
   <div class="tbl"><table>
     <thead><tr><th>内容</th><th>位置</th><th>大小</th><th>为什么每次都读</th></tr></thead>
     <tbody>
@@ -229,7 +252,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>3. 为什么每次测评都要把同样的文件再读一遍</h2>
+  <h3>1.3 为什么每次测评都要把同样的文件再读一遍</h3>
   <p>我们的测评在不用 Docker 的前提下，尽量照搬论文的最终评测流程（TCSExam 附录 D.2 和各题的任务说明）。论文评测的每一条规则，落到实现上都会变成重复的读取：</p>
   <div class="tbl"><table>
     <thead><tr><th>重复的事</th><th>来自论文评测的哪条规则</th></tr></thead>
@@ -250,18 +273,24 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>4. 为什么每次测评都开一个新作业</h2>
+  <h3>1.4 为什么每次测评都开一个新作业</h3>
   <p>一个直接的替代方案是：每一轮（或每棵树）分配一个大节点，所有测评都在上面跑。我们没有这样做，原因有两个：</p>
   <ul>
     <li><b>排队浪费时间。</b>测评的负载是突发的：一次架构变更之后，十个会话会同时提交测评，每次 promote 检查是 30 个实例、每个最多一分钟。固定在一个节点上，这些突发的测评就会互相排队，而树在等测评结果的时候是暂停的。分成单独的作业，就能分散到整个集群所有空闲的核上，一波突发测评大约只要一次测评的时间就跑完。</li>
     <li><b>排队让数据不准。</b>求解程序的分数取决于在限定时间内能做多少计算。如果测评挤在一个超额分配的节点上，就会抢核、抢内存带宽、抢缓存，同一个程序的分数会随着旁边跑着什么而变化。官方评测给每个实例一个绑定的核和独立的内存上限；每个实例一个作业（或作业步）正好复现这一点，树内的分数才能和最终隐藏集分数、以及彼此之间相互比较。</li>
   </ul>
-  <p>代价就是第 2、3 节说的冷启动：每个作业都要重新加载同一套工具链和数据。文件来自离计算节点很近的存储服务器时，这没有问题；来自登录节点时，就出问题了。</p>
+  <p>代价就是 1.2、1.3 节说的冷启动：每个作业都要重新加载同一套工具链和数据。文件来自离计算节点很近的存储服务器时，这没有问题；来自登录节点时，就出问题了。</p>
   <p class="small">新集群的计算节点不能提交作业，所以在那里，一棵树的测评是在这棵树的多节点分配里用 Slurm 作业步来跑的（每个实例一个作业步，绑核和限制都一样），最终评测则从登录节点以 Slurm 数组提交。两种方式都同样是冷启动。</p>
 </section>
 
+<section class="part-head">
+  <span class="eyebrow">第二部分</span>
+  <h2>那 10 分钟发生了什么</h2>
+  <p class="lede">11 月 26 日 15:39 UTC（北京时间 23:39）前后，新集群在 10 分钟内发出了约 800 万个数据包。两个集群有什么不同、那一刻启动了什么、我们怎么改。</p>
+</section>
+
 <section>
-  <h2>5. 两台机器的区别</h2>
+  <h3>2.1 两台机器的区别</h3>
   <div class="tbl"><table>
     <thead><tr><th></th><th>老集群</th><th>新集群（Brev，GCP）</th></tr></thead>
     <tbody>
@@ -277,9 +306,8 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
 </section>
 
 <section>
-  <h2>6. 为什么会出这个问题</h2>
+  <h3>2.2 告警前的 20 分钟</h3>
   <p>这套脚本是在老集群上写的，那里的 <code>/home</code> 是真正的文件服务器；搬到新集群时没有改动。可在新集群上，同一个路径属于登录节点，那只是一台普通的虚拟机，它的磁盘和网卡突然要给 19 个节点上的每一次测评供应编译器、运行时和实例。云服务商报告：<b>11 月 26 日 15:39 UTC（北京时间 23:39）前后，10 分钟内发出了约 800 万个数据包</b>。这正是我们好几件事被安排在同一时刻启动的时候。</p>
-  <h3>告警前的 20 分钟</h3>
   <div class="tbl"><table>
     <thead><tr><th>时间（UTC）</th><th>启动了什么</th><th>从登录节点读了什么</th></tr></thead>
     <tbody>
@@ -290,14 +318,16 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
     </tbody>
   </table></div>
   <p class="small">这个时间线是根据树的截止时间和启动脚本推出来的；之后集群就连不上了，所以还没有用集群日志逐条核对。</p>
-  <h3>为什么是包多，而不只是字节多</h3>
-  <p>10 分钟 800 万个包，大约每秒 1.3 万个。NFS 不只是传文件内容：进程每打开一个文件，都要先查路径、查属性，每次都是一来一回的小包。一次 C++ 编译要打开几百个头文件；几百个编译同时开始，就在大块读取（Python、编译器、JDK、实例）之外，又叠加了海量的小元数据包。</p>
-  <p>所以告警的不是实验平稳运行时的负载，而是<b>我们自己安排出来的一次突发</b>：十棵树的最终评测、13 个会话、5 棵新树，都被同一个事件——第 1、2 次运行结束——同时触发了。</p>
-  <p>测评本身并不需要这些流量：被读的东西在整个实验期间一个字节都不会变。</p>
 </section>
 
 <section>
-  <h2>7. 我们怎么改</h2>
+  <h3>2.3 为什么是包多，而不只是字节多</h3>
+  <p>10 分钟 800 万个包，大约每秒 1.3 万个。NFS 不只是传文件内容：进程每打开一个文件，都要先查路径、查属性，每次都是一来一回的小包。一次 C++ 编译要打开几百个头文件；几百个编译同时开始，就在大块读取（Python、编译器、JDK、实例）之外，又叠加了海量的小元数据包。</p>
+  <p>所以告警的不是实验平稳运行时的负载，而是<b>我们自己安排出来的一次突发</b>：十棵树的最终评测、13 个会话、5 棵新树，都被同一个事件——第 1、2 次运行结束——同时触发了。</p>
+</section>
+
+<section>
+  <h3>2.4 我们怎么改</h3>
   <ol>
     <li><b>每个节点只读一次。</b>作业第一次落到某个计算节点时，把工具链和本次实验用到的题目实例复制到该节点的本地盘（加锁，只复制一次）；之后的测评、编译和会话都读本地。</li>
     <li><b>不再从登录节点读。</b>主副本搬到共享数据存储；登录节点上的 <code>/home</code> 只留给人用。</li>
@@ -307,7 +337,7 @@ html[data-lang="zh"] .lang-body[lang="en"],html:not([data-lang="zh"]) .lang-body
   </ol>
 </section>
 
-<footer>本页更新于 2026-11-27（补充了告警时间线；老/新 Brev 集群；为什么重复读取及实测）。文件大小是在老集群上的副本上实测的；每次测评的流量和页缓存的效果在第 7 节第 3 步实测之前都是估计值。</footer>
+<footer>本页更新于 2026-11-27（补充了告警时间线；老/新 Brev 集群；为什么重复读取及实测）。文件大小是在老集群上的副本上实测的；每次测评的流量和页缓存的效果在 2.4 节第 3 步实测之前都是估计值。</footer>
 </div>
 </main>
 <script>
